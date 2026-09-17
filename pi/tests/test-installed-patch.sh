@@ -7,7 +7,7 @@ TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 PKG="$TMP/pi-coding-agent"
 
-python3 - "$PATCHER" "$PKG" <<'PY'
+python3 -B - "$PATCHER" "$PKG" <<'PY'
 import importlib.util
 import json
 from pathlib import Path
