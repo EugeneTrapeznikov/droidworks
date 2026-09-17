@@ -20,7 +20,68 @@ PATCHED = '''      const command = isRecord2(event.input) && typeof event.input.
       if (!enabled || !autoCompactEnabled || !command) {
         return void 0;
       }
-      if (command.trim().startsWith("rtk ")) {
+      const wrapperInnerIndex = (argv) => {
+        const wrapper = getCommandName(argv);
+        if (["nohup", "command", "builtin", "exec", "noglob", "nocorrect"].includes(wrapper)) {
+          return 1;
+        }
+        if (wrapper === "uv" && argv[1] === "run") {
+          return 2;
+        }
+        let index = 1;
+        if (wrapper === "timeout") {
+          while (index < argv.length) {
+            const arg = argv[index];
+            if (["-s", "-k", "--signal", "--kill-after"].includes(arg)) {
+              index += 2;
+            } else if (["--preserve-status", "--foreground", "-v", "--verbose"].includes(arg) || /^-(?:s|k).+/u.test(arg) || /^--(?:signal|kill-after)=/u.test(arg)) {
+              index += 1;
+            } else if (arg === "--") {
+              index += 1;
+              break;
+            } else {
+              return index + 1;
+            }
+          }
+          return -1;
+        }
+        if (wrapper === "nice" || wrapper === "time") {
+          const valueOptions = wrapper === "nice" ? ["-n", "--adjustment"] : ["-f", "-o", "--format", "--output"];
+          const flagOptions = wrapper === "nice" ? [] : ["-p", "-a", "-v", "--append", "--verbose", "--portability", "--quiet"];
+          while (index < argv.length) {
+            const arg = argv[index];
+            if (valueOptions.includes(arg)) {
+              index += 2;
+            } else if (flagOptions.includes(arg) || wrapper === "nice" && (/^-\\d+$/u.test(arg) || /^-n.+/u.test(arg) || /^--adjustment=/u.test(arg)) || wrapper === "time" && (/^-[fo].+/u.test(arg) || /^--(?:format|output)=/u.test(arg))) {
+              index += 1;
+            } else if (arg === "--") {
+              return index + 1;
+            } else {
+              return index;
+            }
+          }
+        }
+        return -1;
+      };
+      const argvRunsRtk = (initialArgv) => {
+        let argv = initialArgv;
+        for (let depth = 0; depth < 10; depth += 1) {
+          if (getCommandName(argv) === "rtk") {
+            return true;
+          }
+          const innerIndex = wrapperInnerIndex(argv);
+          if (innerIndex < 1 || innerIndex >= argv.length) {
+            return false;
+          }
+          argv = argv.slice(innerIndex);
+        }
+        return false;
+      };
+      const isRtkCommand = splitTopLevelCommandChain(command).some((chainSegment) => splitUnquotedPipes(chainSegment).some((pipelineSegment) => {
+        const effectiveArgv = getEffectiveCommandArgv({ command: pipelineSegment });
+        return argvRunsRtk(effectiveArgv.length > 0 ? effectiveArgv : tokenizeCommand(pipelineSegment));
+      }));
+      if (isRtkCommand) {
         return void 0;
       }
       const outputText = extractTextContent(event.content);

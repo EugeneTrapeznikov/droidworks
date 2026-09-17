@@ -81,12 +81,34 @@ test("generated TokenJuice bypasses RTK and compacts fallback output", async () 
     };
     await handlers.get("session_start")?.({}, ctx);
 
-    assert.equal(await handlers.get("tool_result")(event("rtk git status"), ctx), undefined);
+    for (const command of [
+      "rtk git status",
+      "rtk git status | head -20",
+      "cd /tmp && rtk git status",
+      "env DEBUG=1 rtk git status",
+      "timeout 30 rtk git status",
+      "nice -n 10 rtk rg foo",
+      "command rtk git status",
+    ]) {
+      assert.equal(
+        await handlers.get("tool_result")(event(command), ctx),
+        undefined,
+        `expected RTK bypass for: ${command}`,
+      );
+    }
 
-    const compacted = await handlers.get("tool_result")(event("custom-verbose-command"), ctx);
-    assert.ok(compacted);
-    assert.match(compacted.content[0].text, /tokenjuice compacted bash output/);
-    assert.equal(compacted.details.tokenjuice.compacted, true);
+    for (const command of [
+      "custom-verbose-command",
+      "echo rtk",
+      "rtk-helper git status",
+      "timeout 30 cat rtk",
+      "nice -n 10 grep x rtk",
+    ]) {
+      const compacted = await handlers.get("tool_result")(event(command), ctx);
+      assert.ok(compacted, `expected TokenJuice compaction for: ${command}`);
+      assert.match(compacted.content[0].text, /tokenjuice compacted bash output/);
+      assert.equal(compacted.details.tokenjuice.compacted, true);
+    }
 
     const unsupported = path.join(home, "unsupported-tokenjuice.js");
     writeFileSync(
