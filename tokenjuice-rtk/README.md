@@ -7,37 +7,51 @@ Pi tool_call → RTK rewrites supported commands → command executes
 Pi tool_result → TokenJuice handles only results not prefixed by rtk
 ```
 
-[`index.js`](index.js) is the TokenJuice v0.5.0 generated Pi bundle with one integration rule: results whose executed command starts with `rtk ` bypass TokenJuice. RTK therefore owns commands in its registry; TokenJuice remains the fallback for unsupported commands and its generic reducer.
+This capability keeps TokenJuice and the RTK integration separate. It pins the official TokenJuice package, generates TokenJuice's official Pi extension, then applies one guarded integration rule: commands beginning with `rtk ` bypass TokenJuice. RTK owns commands in its registry; TokenJuice remains the fallback for unsupported commands and its generic reducer.
+
+No generated TokenJuice bundle is stored in Droidworks.
 
 ## Requirements
 
 - [Pi](https://github.com/earendil-works/pi)
+- Node.js 20 or newer and npm
 - [RTK](https://github.com/rtk-ai/rtk) 0.42.0 or newer, with its Pi adapter configured
+
+TokenJuice 0.8.5 is an exact npm dependency installed locally by this capability.
 
 ## Install
 
-From a Droidworks checkout:
+From the Droidworks repository root:
 
 ```bash
 rtk init --agent pi --global
 rtk telemetry disable
-mkdir -p ~/.pi/agent/extensions
-ln -s "$PWD/tokenjuice-rtk" ~/.pi/agent/extensions/tokenjuice-rtk
-node --test tokenjuice-rtk/verify.js
+tokenjuice-rtk/scripts/install.sh
 ```
 
-Use an absolute checkout path when creating the symlink. Run `/reload` in an existing Pi process after installation.
+The installer:
+
+1. Installs the exact TokenJuice dependency from `package-lock.json` without lifecycle scripts.
+2. Runs the official TokenJuice Pi generator.
+3. Applies a version- and source-shape-guarded RTK bypass.
+4. Removes the managed `tokenjuice-rtk` directory symlink used by the bundled integration.
+5. Verifies the generated extension.
+
+The generated runtime lives at `~/.pi/agent/extensions/tokenjuice.js`. Run `/reload` in an existing Pi process after installation.
 
 ## Verification
 
+```bash
+(cd tokenjuice-rtk && npm test)
+python3 tokenjuice-rtk/scripts/apply-rtk-bypass.py --check \
+  ~/.pi/agent/extensions/tokenjuice.js
+```
+
 The tests prove:
 
+- The official TokenJuice 0.8.5 generator remains compatible with the guarded patch.
 - RTK-prefixed command output receives no TokenJuice result patch.
-- Unsupported verbose output still receives TokenJuice compaction.
-
-```bash
-node --test tokenjuice-rtk/verify.js
-```
+- Unsupported verbose output still receives TokenJuice compaction and metadata.
 
 Runtime examples:
 
@@ -58,12 +72,12 @@ Use compacted Bash output when it contains enough evidence. When omitted detail 
 ## Updating
 
 - **RTK:** upgrade through RTK's supported distribution, then rerun `rtk init --agent pi --global`.
-- **TokenJuice:** regenerate `index.js`, reapply the `command.trim().startsWith("rtk ")` bypass before normal result handling, then run the verifier.
+- **TokenJuice:** update the exact dependency and lockfile, regenerate the official extension, update the guarded patch if its source shape changed, then run the verifier.
 
 ## Local data
 
-RTK keeps bounded SQLite history and failure tee files according to its configuration. TokenJuice v0.5.0 writes one metadata JSON file per eligible non-RTK result under `~/.tokenjuice/artifacts` and has no retention cleanup. Metadata includes the full command string, so avoid secrets in command arguments and clean this directory deliberately.
+RTK keeps bounded SQLite history and failure tee files according to its configuration. TokenJuice writes bounded statistics metadata by default and supports opt-in raw artifact storage. Metadata can include command strings; set `TOKENJUICE_STATS=off` in the Pi process environment to disable statistics writes.
 
-## Attribution
+## Upstream status
 
-`index.js` contains a generated bundle of [TokenJuice v0.5.0](https://github.com/vincentkoc/tokenjuice), modified with the RTK bypass described above. TokenJuice is distributed under the MIT License; see [`LICENSE.tokenjuice`](LICENSE.tokenjuice). RTK is an external dependency and is not redistributed here.
+The RTK bypass is maintained as a guarded generated-extension patch until TokenJuice offers a native command-skip option. Once upstream support is available, the patcher can be removed while retaining the same behavioral tests.

@@ -1,0 +1,14 @@
+{
+  "name": "@droidworks/tokenjuice-rtk",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Install TokenJuice for Pi with RTK-aware bypass behavior",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/verify.test.js"
+  },
+  "dependencies": {
+    "tokenjuice": "0.8.5"
+  }
+}
