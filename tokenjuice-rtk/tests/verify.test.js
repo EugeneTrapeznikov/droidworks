@@ -87,7 +87,10 @@ test("generated TokenJuice bypasses RTK and compacts fallback output", async () 
       "cd /tmp && rtk git status",
       "env DEBUG=1 rtk git status",
       "timeout 30 rtk git status",
+      "timeout -- 30 rtk git status",
       "nice -n 10 rtk rg foo",
+      "time -p rtk git status",
+      "nohup rtk git status",
       "command rtk git status",
     ]) {
       assert.equal(
@@ -102,6 +105,7 @@ test("generated TokenJuice bypasses RTK and compacts fallback output", async () 
       "echo rtk",
       "rtk-helper git status",
       "timeout 30 cat rtk",
+      "timeout -- 30 cat rtk",
       "nice -n 10 grep x rtk",
     ]) {
       const compacted = await handlers.get("tool_result")(event(command), ctx);

@@ -37,8 +37,7 @@ PATCHED = '''      const command = isRecord2(event.input) && typeof event.input.
             } else if (["--preserve-status", "--foreground", "-v", "--verbose"].includes(arg) || /^-(?:s|k).+/u.test(arg) || /^--(?:signal|kill-after)=/u.test(arg)) {
               index += 1;
             } else if (arg === "--") {
-              index += 1;
-              break;
+              return index + 2;
             } else {
               return index + 1;
             }
