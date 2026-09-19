@@ -4,7 +4,7 @@ Public tools and extensions for agentic software development.
 
 Focused on making coding agents better at real software work: sharper tools, less noise, and workflows that stay out of the way.
 
-Built from real workflow friction. Some changes stay local; those that generalize go upstream.
+Start with the projects below—custom builds and integrations shaped and tested in real agentic workflows. Improvements that generalize go upstream.
 
 [Open-source approach →](OPEN-SOURCE.md)
 
