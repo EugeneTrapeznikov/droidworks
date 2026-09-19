@@ -1,12 +1,12 @@
 # Droidworks
 
-I use a lot of open-source tools—[Pi](https://github.com/earendil-works/pi), [Herdr](https://github.com/herdrdev/herdr), [TokenJuice](https://github.com/vincentkoc/tokenjuice), and others.
+Public tools and extensions for agentic software development.
 
-In the agentic era, software does not have to stay exactly as it ships. When something almost fits my workflow, I can inspect it, reshape it, and verify the change quickly.
+Focused on making coding agents better at real software work: sharper tools, less noise, and workflows that stay out of the way.
 
-Droidworks is where I keep those improvements. Some remain local because they are specific to my workflow. When a change is useful beyond my setup, I take it upstream.
+Built from real workflow friction. Some changes stay local; those that generalize go upstream.
 
-[How I work with open source →](OPEN-SOURCE.md)
+[Open-source approach →](OPEN-SOURCE.md)
 
 ## Projects
 
