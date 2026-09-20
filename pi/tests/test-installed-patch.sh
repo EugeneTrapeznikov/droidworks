@@ -23,9 +23,9 @@ spec.loader.exec_module(module)
 (package / "dist/bundle/chunks").mkdir(parents=True)
 (package / "dist/modes/interactive").mkdir(parents=True)
 (package / "node_modules/@earendil-works/pi-tui/dist").mkdir(parents=True)
-(package / "package.json").write_text(json.dumps({"version": module.SUPPORTED_PI_VERSION}))
+(package / "package.json").write_text(json.dumps({"version": "99.1.2"}))
 (package / "node_modules/@earendil-works/pi-tui/package.json").write_text(
-    json.dumps({"version": module.SUPPORTED_TUI_VERSION, "type": "module"})
+    json.dumps({"version": "88.7.6", "type": "module"})
 )
 (package / "node_modules/@earendil-works/pi-tui/dist/tui-alt-screen.js").write_text(
     r'''function extractAnsiCode(text, index) {
@@ -105,18 +105,18 @@ grep -q 'theme.bg("selectedBg", theme.fg("text", text))' "$PKG/dist/modes/intera
   "$PKG/dist/bundle/chunks" \
   "$PKG/node_modules/@earendil-works/pi-tui/dist/tui-alt-screen.js"
 
-cp -R "$PKG" "$TMP/unsupported"
-python3 - "$TMP/unsupported/package.json" <<'PY'
-import json
+cp -R "$PKG" "$TMP/changed-shape"
+python3 - "$TMP/changed-shape/dist/modes/interactive/tui-renderer.js" <<'PY'
 from pathlib import Path
 import sys
 path = Path(sys.argv[1])
-data = json.loads(path.read_text())
-data["version"] = "0.85.2"
-path.write_text(json.dumps(data))
+text = path.read_text()
+old = 'selectionStyle: (text) => theme.bg("selectedBg", theme.fg("text", text)),'
+assert text.count(old) == 1
+path.write_text(text.replace(old, "selectionStyle: (text) => text,", 1))
 PY
-if PI_CODING_AGENT_PACKAGE_DIR="$TMP/unsupported" "$PATCHER" --check >/dev/null 2>&1; then
-  echo "expected unsupported-version check to fail" >&2
+if PI_CODING_AGENT_PACKAGE_DIR="$TMP/changed-shape" "$PATCHER" --check >/dev/null 2>&1; then
+  echo "expected changed source shape check to fail" >&2
   exit 1
 fi
 

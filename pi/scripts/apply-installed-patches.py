@@ -10,9 +10,6 @@ from pathlib import Path
 import shutil
 import sys
 
-SUPPORTED_PI_VERSION = "0.85.1"
-SUPPORTED_TUI_VERSION = "0.85.1"
-
 MODULE_FIELDS_OLD = '''    searchCurrentMatchStyle;
     searchNavigationButtonStyle;
     scrollToEndIndicator;
@@ -179,13 +176,8 @@ def main() -> int:
 
     package_dir = package_dir_from_pi()
     pi_version = read_version(package_dir / "package.json", "pi-coding-agent")
-    if pi_version != SUPPORTED_PI_VERSION:
-        fail(f"unsupported pi-coding-agent version: {pi_version} (expected {SUPPORTED_PI_VERSION})")
-
     tui_dir = package_dir / "node_modules/@earendil-works/pi-tui"
     tui_version = read_version(tui_dir / "package.json", "pi-tui")
-    if tui_version != SUPPORTED_TUI_VERSION:
-        fail(f"unsupported pi-tui version: {tui_version} (expected {SUPPORTED_TUI_VERSION})")
 
     module = tui_dir / "dist/tui-alt-screen.js"
     declaration = tui_dir / "dist/tui-alt-screen.d.ts"
@@ -217,7 +209,7 @@ def main() -> int:
     ]
     statuses = [replace_alternative(path, originals, patched, args.check, label) for path, originals, patched, label in changes]
     action = "verified" if args.check else ("applied" if "applied" in statuses else "already applied")
-    print(f"✓ {action} Pi {pi_version} theme-driven fullscreen selection")
+    print(f"✓ {action} Pi {pi_version} / TUI {tui_version} theme-driven fullscreen selection")
     print(f"  runtime: {bundle}")
     return 0
 

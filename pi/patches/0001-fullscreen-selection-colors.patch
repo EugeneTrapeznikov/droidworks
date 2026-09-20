@@ -1,33 +1,68 @@
 diff --git a/packages/coding-agent/src/modes/interactive/tui-renderer.ts b/packages/coding-agent/src/modes/interactive/tui-renderer.ts
-index 70d94231..21d2b473 100644
+index 86c634c..f663651 100644
 --- a/packages/coding-agent/src/modes/interactive/tui-renderer.ts
 +++ b/packages/coding-agent/src/modes/interactive/tui-renderer.ts
-@@ -25,0 +26 @@ export function createInteractiveTui(options: InteractiveTuiOptions): TuiMainScr
+@@ -23,6 +23,7 @@ export function createInteractiveTui(options: InteractiveTuiOptions): TuiMainScr
+ 	if (options.tuiMode === "fullscreen") {
+ 		const styleSearchMatch = (text: string) => theme.bg("searchMatchBg", theme.fg("searchMatchText", text));
+ 		return new TuiAltScreen(terminal, options.showHardwareCursor, options.logDirectory, {
 +			selectionStyle: (text) => theme.bg("selectedBg", theme.fg("text", text)),
+ 			searchMatchStyle: (text) => theme.underline(styleSearchMatch(text)),
+ 			searchCurrentMatchStyle: (text) => theme.bold(theme.inverse(styleSearchMatch(text))),
+ 			searchNavigationButtonStyle: (text, hovered) => (hovered ? theme.underline(text) : text),
 diff --git a/packages/tui/src/tui-alt-screen.ts b/packages/tui/src/tui-alt-screen.ts
-index 28a9e37a..b8d730d2 100644
+index 1b3d261..bd97651 100644
 --- a/packages/tui/src/tui-alt-screen.ts
 +++ b/packages/tui/src/tui-alt-screen.ts
-@@ -169,0 +170,2 @@ export interface TuiAltScreenOptions {
+@@ -168,6 +168,8 @@ export interface TuiAltScreenOptions {
+ 	wheelScrollLines?: number;
+ 	/** Capture mouse events for viewport scrolling and application-owned text selection. */
+ 	mouse?: boolean;
 +	/** Style application-owned transcript selection text. */
 +	selectionStyle?: (text: string) => string;
-@@ -241,0 +244 @@ export class TuiAltScreen extends TuiBase implements ViewportTUI {
+ 	/** Style a non-current transcript search match. */
+ 	searchMatchStyle?: (text: string) => string;
+ 	/** Style the current transcript search match. */
+@@ -241,6 +243,7 @@ export class TuiAltScreen extends TuiBase implements ViewportTUI {
+ 	private readonly searchMatchStyle: (text: string) => string;
+ 	private readonly searchCurrentMatchStyle: (text: string) => string;
+ 	private readonly searchNavigationButtonStyle: (text: string, hovered: boolean) => string;
 +	private readonly selectionStyle: (text: string) => string;
-@@ -268,0 +272 @@ export class TuiAltScreen extends TuiBase implements ViewportTUI {
+ 	private readonly scrollToEndIndicator?: () => string;
+ 	private readonly openUrl?: (url: string) => void;
+ 	private readonly onRightClickPaste?: () => void;
+@@ -268,6 +271,7 @@ export class TuiAltScreen extends TuiBase implements ViewportTUI {
+ 		this.searchMatchStyle = options.searchMatchStyle ?? ((text) => `\x1b[4m${text}\x1b[24m`);
+ 		this.searchCurrentMatchStyle = options.searchCurrentMatchStyle ?? ((text) => `\x1b[1;7m${text}\x1b[22;27m`);
+ 		this.searchNavigationButtonStyle = options.searchNavigationButtonStyle ?? ((text) => text);
 +		this.selectionStyle = options.selectionStyle ?? ((text) => `\x1b[7m${text}\x1b[27m`);
-@@ -1548 +1552,2 @@ export class TuiAltScreen extends TuiBase implements ViewportTUI {
+ 		this.scrollToEndIndicator = options.scrollToEndIndicator;
+ 		this.openUrl = options.openUrl;
+ 		this.onRightClickPaste = options.onRightClickPaste;
+@@ -1551,20 +1555,22 @@ export class TuiAltScreen extends TuiBase implements ViewportTUI {
+ 	}
+ 
+ 	private applySelectionHighlight(text: string): string {
 -		let result = "\x1b[7m";
 +		let result = "";
 +		let plainStart = 0;
-@@ -1553 +1557,0 @@ export class TuiAltScreen extends TuiBase implements ViewportTUI {
+ 		let index = 0;
+ 		while (index < text.length) {
+ 			const ansi = extractAnsiCode(text, index);
+ 			if (!ansi) {
 -				result += text[index];
-@@ -1556,0 +1561 @@ export class TuiAltScreen extends TuiBase implements ViewportTUI {
+ 				index += 1;
+ 				continue;
+ 			}
 +			if (index > plainStart) result += this.selectionStyle(text.slice(plainStart, index));
-@@ -1558 +1562,0 @@ export class TuiAltScreen extends TuiBase implements ViewportTUI {
+ 			result += ansi.code;
 -			if (ansi.code.endsWith("m")) result += "\x1b[7m";
-@@ -1559,0 +1564 @@ export class TuiAltScreen extends TuiBase implements ViewportTUI {
+ 			index += ansi.length;
 +			plainStart = index;
-@@ -1561 +1566,2 @@ export class TuiAltScreen extends TuiBase implements ViewportTUI {
+ 		}
 -		return `${result}\x1b[27m`;
 +		if (plainStart < text.length) result += this.selectionStyle(text.slice(plainStart));
 +		return result;
+ 	}
+ 
+ 	private applySelection(screen: string[], layout = this.currentLayout): string[] {
