@@ -7,5 +7,6 @@ Focused on making coding agents better at real software work: sharper tools, les
 ## Projects
 
 - **[Pi](pi/)** — local Pi customization with theme-aware fullscreen selection and version-guarded patching.
+- **[Pi Footer Nerd Fonts](pi-footer-nerdfonts/)** — replaces Pi footer emojis with consistent Nerd Font glyphs.
 - **[TokenJuice + RTK](tokenjuice-rtk/)** — agent-harness integration that coordinates two token-saving tools, providing layered output optimization without double processing.
 - **[Open-source contributions](OPEN-SOURCE.md)** — the path from local workflow improvements to tested upstream contributions.
