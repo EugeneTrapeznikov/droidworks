@@ -1,7 +1,7 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/logo/droidworks-dark.svg">
   <source media="(prefers-color-scheme: light)" srcset="assets/logo/droidworks-light.svg">
-  <img alt="Droidworks" src="assets/logo/droidworks-light.svg" width="612" height="96">
+  <img alt="Droidworks" src="assets/logo/droidworks-light.svg" width="600" height="96">
 </picture>
 
 # Droidworks

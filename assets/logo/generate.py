@@ -114,12 +114,13 @@ def save(root, filename):
 def main():
     for theme in ("light", "dark"):
         root = make_svg()
-        # One cell of transparent padding around the wordmark.
+        # Start at the first letter; keep one cell of padding on the other sides.
         margin = 3 * CELL
-        root.set("viewBox", f"{margin} {margin} {PANEL_WIDTH - 2 * margin} {PANEL_HEIGHT - 2 * margin}")
-        root.set("width", str(PANEL_WIDTH - 2 * margin))
+        left = 4 * CELL
+        root.set("viewBox", f"{left} {margin} {PANEL_WIDTH - left - margin} {PANEL_HEIGHT - 2 * margin}")
+        root.set("width", str(PANEL_WIDTH - left - margin))
         root.set("height", str(PANEL_HEIGHT - 2 * margin))
-        panel(root, theme, accented=True, transparent=True)
+        panel(root, theme, accented=False, transparent=True)
         save(root, f"droidworks-{theme}.svg")
 
 

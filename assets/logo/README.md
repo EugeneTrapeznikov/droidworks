@@ -1,6 +1,6 @@
 # Droidworks wordmark
 
-The README uses transparent SVGs selected by GitHub's light/dark theme. File names refer to the page theme: `droidworks-light.svg` uses charcoal letters; `droidworks-dark.svg` uses off-white letters. Both retain the green `k` and gray fill.
+The README uses transparent SVGs selected by GitHub's light/dark theme. File names refer to the page theme: `droidworks-light.svg` uses charcoal letters; `droidworks-dark.svg` uses off-white letters. Both use monochrome letters with gray fill. The initial `d` starts at the left image edge; the other sides retain one cell of transparent padding.
 
 Edit `glyphs.json`, then regenerate from the repository root with Python 3 (standard library only):
 
