@@ -42,7 +42,7 @@
         <rect x="36" y="36" width="12" height="12" fill="#595959" data-cell="3,3" data-layer="gray" />
         <rect x="0" y="48" width="12" height="12" fill="#f4f4f4" data-cell="0,4" data-layer="ink" />
         <rect x="12" y="48" width="12" height="12" fill="#595959" data-cell="1,4" data-layer="gray" />
-        <rect x="24" y="48" width="12" height="12" fill="#595959" data-cell="2,4" data-layer="gray" />
+        <rect x="24" y="48" width="12" height="12" fill="#f4f4f4" data-cell="2,4" data-layer="ink" />
         <rect x="36" y="48" width="12" height="12" fill="#f4f4f4" data-cell="3,4" data-layer="ink" />
       </g>
       <g transform="translate(120 0)" data-letter="o" data-index="2">
@@ -156,7 +156,7 @@
         <rect x="36" y="36" width="12" height="12" fill="#595959" data-cell="3,3" data-layer="gray" />
         <rect x="0" y="48" width="12" height="12" fill="#f4f4f4" data-cell="0,4" data-layer="ink" />
         <rect x="12" y="48" width="12" height="12" fill="#595959" data-cell="1,4" data-layer="gray" />
-        <rect x="24" y="48" width="12" height="12" fill="#595959" data-cell="2,4" data-layer="gray" />
+        <rect x="24" y="48" width="12" height="12" fill="#f4f4f4" data-cell="2,4" data-layer="ink" />
         <rect x="36" y="48" width="12" height="12" fill="#f4f4f4" data-cell="3,4" data-layer="ink" />
       </g>
       <g transform="translate(480 0)" data-letter="k" data-index="8">
