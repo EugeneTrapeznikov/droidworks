@@ -1,3 +1,15 @@
 .DS_Store
 __pycache__/
 *.py[cod]
+# Benchmark output stays local: no results, transcripts, or session data in git.
+**/bench/**/results/
+**/bench/**/*.jsonl
+*.session/
+*.session.jsonl
+session.jsonl
+subagent-artifacts/
+**/local-judge/*.jsonl
+.venv/
+node_modules/
+**/bench/session-replay/results-*.md
+**/bench/session-replay/flagged-*
