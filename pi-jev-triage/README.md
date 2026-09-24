@@ -8,7 +8,11 @@ Tool-result triage for Pi, driven by a decision model. One capability: a large t
 pi install npm:pi-jev-triage
 ```
 
-1. Get a [Vercel AI Gateway](https://vercel.com/ai-gateway/models/jev) key and set `VERCEL_API_KEY`, either in your shell or as a `VERCEL_API_KEY=...` line in `~/.config/vercel/.env`.
+1. Set a key for hosted Jev, from either provider:
+   - [Vercel AI Gateway](https://vercel.com/ai-gateway/models/jev): `VERCEL_API_KEY`, in your shell or in `~/.config/vercel/.env`.
+   - [TypeSafe](https://typesafe.ai): `TYPESAFE_API_KEY`, in your shell or in `~/.config/typesafe/.env`.
+
+   The extension uses whichever key it finds (Vercel if both). To pick one explicitly, set `PI_JEV_JUDGE=vercel` or `PI_JEV_JUDGE=typesafe`.
 2. The extension starts in shadow mode: it judges every large tool result and logs the decision, but hides nothing. To let it trim results, add this to `~/.pi/agent/settings.json`:
 
    ```json
@@ -97,7 +101,7 @@ Fail-open: a judge timeout (15 s) or error leaves the result untouched. `PI_JEV_
 
 ## Jev access
 
-Jev is on Vercel AI Gateway as `typesafe-ai/jev` (`type: "evaluation"`, $0.042/M input, output free). It is not OpenAI-chat compatible, so it cannot go through a LiteLLM shim; the extension calls `POST https://ai-gateway.vercel.sh/v1/evaluate` with plain fetch. Key lives in `~/.config/vercel/.env` as `VERCEL_API_KEY`; the extension loads it at runtime (`extension/src/judge/dotenv.ts`). Questions batch in one call at near-zero extra latency.
+Jev is served by TypeSafe directly (`POST https://api.typesafe.ai/v1/systemone`, `TYPESAFE_API_KEY`) and by Vercel AI Gateway as `typesafe-ai/jev` (`type: "evaluation"`, $0.042/M input, output free). The extension picks the backend from whichever key is set. The benchmarks in this repo ran through Vercel. It is not OpenAI-chat compatible, so it cannot go through a LiteLLM shim; the extension calls `POST https://ai-gateway.vercel.sh/v1/evaluate` with plain fetch. Key lives in `~/.config/vercel/.env` as `VERCEL_API_KEY`; the extension loads it at runtime (`extension/src/judge/dotenv.ts`). Questions batch in one call at near-zero extra latency.
 
 ## Benchmark tiers
 

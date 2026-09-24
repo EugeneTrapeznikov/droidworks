@@ -68,7 +68,7 @@ Env overrides. Each wins over its `settings.json` key; `PI_JEV_FEATURES`, `PI_JE
 
 | Var | Values | Default |
 |---|---|---|
-| `PI_JEV_JUDGE` | `vercel`, `typesafe`, `local`, `mock` (tests only), or a `judges` name | `vercel` |
+| `PI_JEV_JUDGE` | `vercel`, `typesafe`, `local`, `mock` (tests only), or a `judges` name | `vercel` if `VERCEL_API_KEY`/`AI_GATEWAY_API_KEY` is set, else `typesafe` if `TYPESAFE_API_KEY` is set, else `vercel` |
 | `PI_JEV_FEATURES` | `triage`; empty disables the extension | `triage` |
 | `PI_JEV_SHADOW` | `1` decides and logs, never mutates | `1` |
 | `PI_JEV_LOG` | path to decision JSONL | `~/.pi/agent/pi-jev/decisions.jsonl` |

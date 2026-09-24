@@ -3,12 +3,13 @@
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 
-const DEFAULT_ENV_FILES = [`${homedir()}/.config/vercel/.env`, `${homedir()}/.config/typesafe/.env`];
+const home = () => process.env.HOME || homedir();
+const defaultEnvFiles = () => [`${home()}/.config/vercel/.env`, `${home()}/.config/typesafe/.env`];
 
 /** Return `name` from env, else from the first env file that defines it. Files listed in PI_JEV_ENV_FILES (colon-separated) come first. */
 export function secret(name: string, env: Record<string, string | undefined> = process.env): string | undefined {
   if (env[name]) return env[name];
-  const files = [...(env.PI_JEV_ENV_FILES ?? "").split(":").filter(Boolean), ...DEFAULT_ENV_FILES];
+  const files = [...(env.PI_JEV_ENV_FILES ?? "").split(":").filter(Boolean), ...defaultEnvFiles()];
   for (const file of files) {
     let text: string;
     try { text = readFileSync(file, "utf8"); } catch { continue; }

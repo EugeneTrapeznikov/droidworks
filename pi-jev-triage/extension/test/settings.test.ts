@@ -3,7 +3,7 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loadConfig } from "../src/telemetry.ts";
-import { readSettings, type JevSettings } from "../src/settings.ts";
+import { defaultJudge, readSettings, type JevSettings } from "../src/settings.ts";
 import { QUESTION_SETS, RECALL_NOTE, RECALL_SECTION, loadTriageConfig } from "../src/triage/core.ts";
 import { MockJudge } from "../src/judge/index.ts";
 
@@ -151,5 +151,21 @@ describe("recall note in the system prompt", () => {
 		const pi = fakePi();
 		register(pi, new MockJudge(), cfg(true));
 		expect(pi.handlers.before_agent_start).toBeUndefined();
+	});
+});
+
+describe("default judge follows the available key", () => {
+	test("vercel key → vercel, typesafe key only → typesafe, none → vercel", () => {
+		const home = process.env.HOME;
+		process.env.HOME = mkdtempSync(join(tmpdir(), "pi-jev-home-")); // no key files
+		try {
+			expect(defaultJudge({ VERCEL_API_KEY: "v", TYPESAFE_API_KEY: "t" })).toBe("vercel");
+			expect(defaultJudge({ AI_GATEWAY_API_KEY: "v" })).toBe("vercel");
+			expect(defaultJudge({ TYPESAFE_API_KEY: "t" })).toBe("typesafe");
+			expect(defaultJudge({})).toBe("vercel");
+			expect(loadConfig({ TYPESAFE_API_KEY: "t" } as NodeJS.ProcessEnv, {}).judge).toBe("typesafe");
+		} finally {
+			process.env.HOME = home;
+		}
 	});
 });

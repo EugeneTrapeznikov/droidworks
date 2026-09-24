@@ -3,6 +3,7 @@
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { secret } from "./judge/dotenv.ts";
 
 export interface JevSettings {
 	judge?: string;
@@ -58,9 +59,15 @@ export function pickNum(envVal: string | undefined, setVal: unknown, d: number):
 	return typeof setVal === "number" && Number.isFinite(setVal) ? setVal : d;
 }
 
+/** Hosted Jev through whichever key is set: Vercel AI Gateway first, TypeSafe when only its key exists. */
+export function defaultJudge(env: NodeJS.ProcessEnv): string {
+	if (secret("VERCEL_API_KEY", env) || secret("AI_GATEWAY_API_KEY", env)) return "vercel";
+	return secret("TYPESAFE_API_KEY", env) ? "typesafe" : "vercel";
+}
+
 /** Selected judge: `name` as configured, `backend` for the factory, plus the named judge's url, cap, and triage overrides. */
 export function resolveJudge(env: NodeJS.ProcessEnv, s: JevSettings) {
-	const name = env.PI_JEV_JUDGE || s.judge || "vercel";
+	const name = env.PI_JEV_JUDGE || s.judge || defaultJudge(env);
 	const named = isObject(s.judges?.[name]) ? s.judges![name] : undefined;
 	return {
 		name,
