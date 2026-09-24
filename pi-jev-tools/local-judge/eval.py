@@ -3,8 +3,8 @@
 
     uv run --python .venv python eval.py --engine logprob --model mlx-community/Qwen3-1.7B-4bit
 
-30 routing choices over the user's real Pi catalog (18 active tools from
-research/pi-feasibility.md A.2, 33 skills from ~/.pi/agent/settings.json),
+30 routing choices over the user's real Pi catalog (18 active tools,
+33 skills from ~/.pi/agent/settings.json),
 10 "none needed" prompts against the same catalogs, and 20 block-relevance
 nouls built from code files in this repo. Writes eval.jsonl next to this file.
 """

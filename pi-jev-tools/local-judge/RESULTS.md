@@ -46,7 +46,7 @@ PyTorch MPS through `sentence-transformers`.
 
 60 items, built by `eval.py` and written to `eval.jsonl`:
 
-- **15 tool-routing choices** over the user's 18 active Pi tools (`research/pi-feasibility.md` A.2) plus a `none` option.
+- **15 tool-routing choices** over the user's 18 active Pi tools plus a `none` option.
 - **15 skill-routing choices** over the 33 skills resolved from `~/.pi/agent/settings.json` plus `none`. Gold is a *set* where the catalog contains near-duplicates (`grilling`/`grill-me`/`grill-with-docs`, `handoff`/`handoff-doc`).
 - **10 "none needed"** plain prompts ("hi", "what's 17 * 23?") against the same two catalogs; gold is `none`.
 - **20 block-relevance nouls**: `scripts/mine-sessions.py`, `scripts/mine-sessions-cost.py` and `scripts/probe-window.ts` cut into 25-line blocks, paired with two hand-written tasks and hand-labelled. Base rate 6 yes / 14 no.

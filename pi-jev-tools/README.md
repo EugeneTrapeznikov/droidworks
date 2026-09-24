@@ -46,7 +46,7 @@ At 0.15 triage hid more than twice the chars of 0.10 at the same resolve rate. A
 
 ## What "Jev" is
 
-Not an acronym. Jev is TypeSafe's "System One" decision model: a fast, cheap non-LLM that only picks from a finite option set and returns per-option probabilities. BuilderIO/agent-native calls it once per user prompt to choose which tool schemas and skill bodies enter the model's context. The ranker is the replaceable part; the placement is the idea. Details: [research/video-fake-jev-demos.md](research/video-fake-jev-demos.md), [research/agent-native-implementation.md](research/agent-native-implementation.md).
+Not an acronym. Jev is TypeSafe's "System One" decision model: a fast, cheap non-LLM that answers bounded questions (yes/no, choice, score) with per-option probabilities. This extension asks it one yes/no question per block of a large tool result.
 
 ## Why triage
 
@@ -79,7 +79,7 @@ Fail-open: a judge timeout (15 s) or error leaves the result untouched. `PI_JEV_
 
 ## Jev access
 
-Jev is on Vercel AI Gateway as `typesafe-ai/jev` (`type: "evaluation"`, $0.042/M input, output free). It is not OpenAI-chat compatible, so it cannot go through a LiteLLM shim; the extension calls `POST https://ai-gateway.vercel.sh/v1/evaluate` with plain fetch. Key lives in `~/.config/vercel/.env` as `VERCEL_API_KEY`; the extension loads it at runtime (`extension/src/judge/dotenv.ts`). Questions batch in one call at near-zero extra latency. Details and prior art: [research/benchmarks-and-prior-art.md](research/benchmarks-and-prior-art.md).
+Jev is on Vercel AI Gateway as `typesafe-ai/jev` (`type: "evaluation"`, $0.042/M input, output free). It is not OpenAI-chat compatible, so it cannot go through a LiteLLM shim; the extension calls `POST https://ai-gateway.vercel.sh/v1/evaluate` with plain fetch. Key lives in `~/.config/vercel/.env` as `VERCEL_API_KEY`; the extension loads it at runtime (`extension/src/judge/dotenv.ts`). Questions batch in one call at near-zero extra latency.
 
 ## Benchmark tiers
 
@@ -114,4 +114,3 @@ Measured, then deferred: ship one strong capability first. `src/judge/types.ts` 
 - `local-judge/`: loopback System One sidecar for `--judge local`. Default engine `kev` (`kev.serve` + `jaredpalmer/kev-0.8b`).
 - `scripts/probe-window.ts`: Pi extension that dumps the first-turn system prompt, skills, and per-package tool schema sizes. `PI_JEV_PROBE_OUT=/tmp/probe pi -e scripts/probe-window.ts -p "reply with the single word ok"`.
 - `scripts/mine-sessions.py`, `scripts/mine-sessions-cost.py`: mine `~/.pi/agent/sessions` for turn types, chains, context sizes, cost split, tool-result sizes.
-- `research/`: video analysis, agent-native code walkthrough, Pi API feasibility with calibrated numbers, benchmark landscape and prior art.
