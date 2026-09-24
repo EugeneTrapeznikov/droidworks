@@ -39,7 +39,7 @@ export const TIMEOUT_MS = 15_000;
 export const JEV_USD_PER_MTOK = 0.042;
 const EXCLUDE = ["bench", "pi-jev", "swe", ".session/", "scratchpad"];
 
-// --- session parsing (same rules as scripts/project-triage-savings.py) ---
+// --- session parsing ---
 
 /** What a message puts into the next call's context: text parts and tool-call arguments, thinking excluded. */
 export function visibleChars(content: unknown): number {
@@ -112,7 +112,7 @@ function fromCache(d: Decision): JudgeResponse {
 
 /**
  * Chars per token from growth between consecutive calls with no compaction between them: chars added
- * to the transcript over tokens the recorded context grew by (the rule in scripts/project-triage-savings.py).
+ * to the transcript over tokens the recorded context grew by.
  * Independent of the system prompt and of pruning outside the transcript. Outside 1.5–8, or under 5,000
  * tokens of growth, falls back to 3.3.
  */
@@ -652,9 +652,8 @@ const readDecisions = (path: string): Decision[] => {
 
 if (import.meta.main) {
 	// No circuit breaker: a failed result fails open and is counted, as the extension would.
-	process.env.PI_JEV_BENCH_MIN_SUCCESS ??= "0";
 	process.env.PI_JEV_JUDGE ??= "vercel";
-	const { askWithBackoff, getJudge, retryCounts } = await import("../replay/judge.ts");
+	const { askWithBackoff, getJudge, retryCounts } = await import("./judge.ts");
 	const argv = process.argv.slice(2);
 	const opt = (f: string, d: string) => (argv.includes(f) ? argv[argv.indexOf(f) + 1]! : d);
 	const top = Number(opt("--top", "20"));

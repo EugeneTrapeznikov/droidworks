@@ -52,7 +52,7 @@ export interface DecisionRecord {
   inputTokens?: number;
   shadow: boolean;
   /**
-   * Feature-specific payload. These keys are read by bench/swe (moa-harness score.py) and bench/live
+   * Feature-specific payload. These keys are read by bench/swe (moa-harness score.py)
    * and must not be renamed: triage `bytesBefore`, `bytesAfter`; prefix `tokensSaved`,
    * `skillsSelected`, `toolsSelected` (the names prefix actually kept, tools excluding the base set);
    * spec `hit` (boolean), `bytesAppended`, `chosen`. Every record may carry `outcome`.

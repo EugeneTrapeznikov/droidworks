@@ -146,7 +146,7 @@ export function pickPrompt(prompts: string[]): string {
 	return pick.slice(0, TASK_PROMPT_CHARS);
 }
 
-/** The judge's task text. Shared with bench/replay so both send the same string. */
+/** The judge's task text. Shared with bench/session-replay so both send the same string. */
 export function formatTask(prompt: string, assistant: string): string {
 	const note = assistant.trim().slice(-TASK_NOTE_CHARS);
 	return [prompt && `Task: ${prompt.slice(0, TASK_PROMPT_CHARS)}`, note && `Latest agent note: ${note}`]
@@ -261,7 +261,7 @@ export const QUESTION_SETS = {
 	},
 } satisfies Record<string, QuestionSet>;
 
-/** The default set's block question in its subject-carried form (what `bench/replay` sends). */
+/** The default set's block question in its subject-carried form. */
 export const BLOCK_QUESTION = QUESTION_SETS.winnow.block();
 
 /** `PI_JEV_QUESTION_SET` > settings `questionSet` > `winnow`. An unknown name throws so a typo cannot silently fall back. */

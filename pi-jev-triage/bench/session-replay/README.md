@@ -8,7 +8,7 @@ PI_JEV_JUDGE=mock   bun run bench/session-replay/replay.ts --date dry   # offlin
 bun test bench/session-replay
 ```
 
-- Judge: 15 s per attempt, up to 5 attempts with backoff on 429/502/503/timeout (`bench/replay/judge.ts` `askWithBackoff`), 4 sessions at a time. A result that still fails is kept verbatim and counted as fail-open.
+- Judge: 15 s per attempt, up to 5 attempts with backoff on 429/502/503/timeout (`judge.ts` `askWithBackoff`), 4 sessions at a time. A result that still fails is kept verbatim and counted as fail-open.
 - Tokens: each session's recorded input+cacheRead tokens over its transcript chars gives chars/token (fallback 3.3). Saved tokens split into input and cacheRead by each call's recorded proportions and are priced at that call's recorded rates, minus 155 tokens/call of recall overhead.
 - Harm proxy: a hidden block is flagged when one of its identifiers (6+ chars with `_`, `/`, or camelCase) appears in the original session's later assistant text or tool inputs.
 

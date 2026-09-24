@@ -26,7 +26,7 @@ On 20 long real sessions, hosted Jev triage freed 9.7% of context (aggregate; se
 
 It is a modest, measured win on context headroom, not on cost. The extension ships triage only ([extension/README.md](extension/README.md)) with hosted Jev (`vercel`) and drop 0.20. Evidence, cheapest first:
 
-**(a) Corpus** ([figures/corpus](bench/figures/corpus-2026-09-23.md)). Tool results are 95% of transcript chars, and 81.5% of tool-result chars pass the triage gates. So triage acts on almost all of the context.
+**(a) Corpus** (`scripts/mine-corpus-triage.py` over 1,093 real Pi sessions). Tool outputs are 79% of all session chars (tool calls in total, 91%; user prompts, 1%), and 81.5% of tool-output chars pass the triage gates. So triage acts on most of the context.
 
 **(b) SWE-bench Lite 20, safety** ([bench/swe/RESULTS.md](bench/swe/RESULTS.md)). Resolved: `full` 9/20, `off` 9/20, `triage-vercel` 10/20 (sign test p = 1.0); the threshold arms at 0.10 and 0.15 also resolved 10/20 each. Tokens and cost vs `full` are within noise (input+cacheRead −0.7%, p = 0.50). Triage adds about 11 s per task (median). It hid 16% of tool-result chars per task (p50), the model made 5 `pi_jev_recall` calls, and 20% of judge calls failed open (23/116). Side finding: `full` vs bare `off` Pi scores the same 9/20 at 3.2× tokens and 1.9× cost, all of it the skills and extensions prefix re-read every turn.
 
@@ -103,12 +103,10 @@ Jev is on Vercel AI Gateway as `typesafe-ai/jev` (`type: "evaluation"`, $0.042/M
 
 Cheapest first, same names as the bench code; aggregates only ([bench/README.md](bench/README.md)):
 
-1. **Replay** (`bench/replay/`). Offline, over local sessions. Ground truth is lexical (what the model did next), which turned out to be the weak point; see Status (d). [RESULTS.md](bench/replay/RESULTS.md).
-2. **Live** (`bench/live/`). Cold `pi -p` runs of a 30-prompt set against a fixed fixture repo. The fixture files are small, so triage rarely fires. [RESULTS.md](bench/live/RESULTS.md).
-3. **SWE-bench Lite 20** (`bench/swe/`). Paired per-task runs through the moa-harness runner, arms `off`, `full`, `triage-vercel`, plus threshold arms `triage-vercel-010` / `-015`. [RESULTS.md](bench/swe/RESULTS.md).
-4. **Session replay** (`bench/session-replay/`). Real long sessions judged by hosted Jev, context rebuilt offline, plus a threshold sweep and two harm proxies. [results](bench/session-replay/results-2026-09-23.md).
+1. **SWE-bench Lite 20** (`bench/swe/`). Paired per-task runs through the moa-harness runner, arms `off`, `full`, `triage-vercel`, plus threshold arms `triage-vercel-010` / `-015` / `-020`. [RESULTS.md](bench/swe/RESULTS.md).
+2. **Session replay** (`bench/session-replay/`). Real long sessions judged by hosted Jev, context rebuilt offline, plus a threshold sweep and two harm proxies. [results](bench/session-replay/results-2026-09-23.md).
 
-Rules: one pricing table and one telemetry version across arms. Tokens and call counts are ground truth; dollars are derived. `off` (full tool output) is the baseline; `mock` is a test-only judge, not an arm. Replay retries hosted-Jev 429/503 with backoff and trips a breaker; it never writes a fail-open answer as a result.
+Rules: one pricing table and one telemetry version across arms. Tokens and call counts are ground truth; dollars are derived. `off` (full tool output) is the baseline; `mock` is a test-only judge, not an arm. Session replay retries hosted-Jev 429/502/503 with backoff; a result that still fails is kept whole and counted as fail-open.
 
 ## Future ideas
 
@@ -125,8 +123,6 @@ Measured, then deferred: ship one strong capability first. `src/judge/types.ts` 
 ## Files
 
 - `extension/`: the Pi extension (triage, judge backends, telemetry). Run `pi -e pi-jev-triage/extension/src/index.ts`; `bun test` in `extension/`.
-- `bench/replay/`: `bun run bench/replay/cli.ts <extract|judge|score|report> [--judge vercel|typesafe|local|mock] [--limit N] [--sample stratified] [--timeout-ms N] [--dry-run] [--yes]`. The deadline is `--timeout-ms`, else `PI_JEV_TIMEOUT_MS`, else 15000; `PI_JEV_BENCH_CONCURRENCY=1` against a single-threaded local sidecar. Cases and judged probabilities live under `~/.pi/agent/pi-jev/replay/` (verbatim session text, never in git).
-- `bench/live/`: `bun bench/live/run.ts --arms off,triage-local,triage-vercel`, then `bun bench/live/score.ts --in <dir>`.
 - `bench/swe/`: `arms.json` for the moa-harness runner.
 - `bench/session-replay/`: `replay.ts`. The aggregate `results-*.md` is committed; per-result decisions (`*.jsonl`) and the session-label mapping (`private/`) stay local.
 - `scripts/probe-window.ts`: Pi extension that dumps the first-turn system prompt, skills, and per-package tool schema sizes. `PI_JEV_PROBE_OUT=/tmp/probe pi -e scripts/probe-window.ts -p "reply with the single word ok"`.
