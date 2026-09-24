@@ -128,6 +128,6 @@ describe("per-judge triage overrides", () => {
 	test("another judge keeps the triage values and defaults", () => {
 		const t = loadTriageConfig(env({ PI_JEV_JUDGE: "vercel" }), s);
 		expect([t.drop, t.keep, t.maxBlocksPerCall]).toEqual([0.1, 0.5, 0]);
-		expect(loadTriageConfig(env(), {}).drop).toBe(0.1);
+		expect(loadTriageConfig(env(), {}).drop).toBe(0.15);
 	});
 });

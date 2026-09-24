@@ -39,7 +39,7 @@ file or a non-object block logs one warning and the extension runs on defaults.
   "triage": {
     "tools": ["read", "bash", "grep", "find", "ls", "fetch_url", "mcp"],
     "minChars": 2000, "blockLines": 25, "blockChars": 1500,
-    "drop": 0.1, "keep": 0.5, "minPruneRatio": 0.2, "skipStructured": true
+    "drop": 0.15, "keep": 0.5, "minPruneRatio": 0.2, "skipStructured": true
   }
 }
 ```
@@ -50,8 +50,8 @@ file or a non-object block logs one warning and the extension runs on defaults.
   `stateChars[<backend>]` > code default (80000, `local` 24000).
 - Local url order: `PI_JEV_LOCAL_URL` > the named judge's `url` > `localUrl`.
 - Drop/keep order: `PI_JEV_DROP` / `PI_JEV_KEEP` > the named judge's `drop` / `keep` > `triage.drop` /
-  `triage.keep` > code default (0.1 / 0.5). The `jevk5` block above is the recommended JevK5 setup:
-  on real SWE reads JevK5 scores blocks at min 0.107 / median 0.419, so a 0.1 drop line hides nothing.
+  `triage.keep` > code default (0.15 / 0.5). The `jevk5` block above is the recommended JevK5 setup:
+  on real SWE reads JevK5 scores blocks at min 0.107 / median 0.419, so a 0.10 drop line hides nothing.
 - `maxBlocksPerCall` (named judge only; `PI_JEV_MAX_BLOCKS_PER_CALL` wins; default 0 = one request):
   the judged blocks go out in consecutive chunks of at most N, one request after another. Each chunk
   carries the same task and tool, only its own blocks, and the error question. A chunk whose error
@@ -78,7 +78,7 @@ Env overrides. Each wins over its `settings.json` key; `PI_JEV_FEATURES`, `PI_JE
 | `PI_JEV_TRIAGE_MIN_CHARS` | results shorter than this are passed through | `2000` |
 | `PI_JEV_BLOCK_LINES` | max lines per triage block | `25` |
 | `PI_JEV_BLOCK_CHARS` | max chars per triage block; long-line output (JSON, minified, fetched pages) gets fewer lines per block so it is still judged; a single longer line is hard-split into pieces that recall as the whole line | `1500` |
-| `PI_JEV_DROP` / `PI_JEV_KEEP` | hide at P ≤ drop, keep verbatim at P ≥ keep, uncertain stays; wins over `judges.<name>.drop` / `keep` | `0.1` / `0.5` |
+| `PI_JEV_DROP` / `PI_JEV_KEEP` | hide at P ≤ drop, keep verbatim at P ≥ keep, uncertain stays; wins over `judges.<name>.drop` / `keep` | `0.15` / `0.5` |
 | `PI_JEV_MAX_BLOCKS_PER_CALL` | judged blocks per judge request, sent as sequential chunks under one deadline; `0` = one request; wins over `judges.<name>.maxBlocksPerCall` | `0` |
 | `PI_JEV_MIN_PRUNE_RATIO` | skip the rewrite unless this fraction of chars would be hidden | `0.2` |
 | `PI_JEV_SKIP_STRUCTURED` | pass unified diffs (`git diff`, `git show`, bare hunks) and JSON/JSONL bodies through unjudged, logged as `skip_structured`; `0` triages them | `1` |

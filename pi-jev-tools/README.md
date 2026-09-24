@@ -6,7 +6,7 @@ Tool-result triage for Pi, driven by a decision model. One capability: a large t
 
 On 20 long real sessions, hosted Jev triage freed 3.1% of context per call (p50) at the shipped 0.10 threshold and a projected 6.5% at 0.15 (aggregate; session p50 5.9%), at 65 cents of judge spend, with no task regressions on SWE-bench Lite 20.
 
-It is a modest, measured win on context headroom, not on cost. The extension ships triage only ([extension/README.md](extension/README.md)) with hosted Jev (`vercel`) and drop 0.10. Evidence, cheapest first:
+It is a modest, measured win on context headroom, not on cost. The extension ships triage only ([extension/README.md](extension/README.md)) with hosted Jev (`vercel`) and drop 0.15. Evidence, cheapest first:
 
 **(a) Corpus** ([figures/corpus](bench/figures/corpus-2026-09-23.md)). Tool results are 95% of transcript chars, and 81.5% of tool-result chars pass the triage gates. So triage acts on almost all of the context.
 
@@ -16,8 +16,8 @@ It is a modest, measured win on context headroom, not on cost. The extension shi
 
 | drop ≤ | judged chars hidden | context saved, aggregate / session p50 | flagged (loose) | unique loss (strict) |
 |---|--:|--:|--:|--:|
-| 0.10 (shipped) | 10.2% | 3.3% / 3.1% | 38.6% | 4.3% |
-| 0.15 | 21.0% | 6.5% / 5.9% | 46.1% | 4.6% |
+| 0.10 | 10.2% | 3.3% / 3.1% | 38.6% | 4.3% |
+| 0.15 (default) | 21.0% | 6.5% / 5.9% | 46.1% | 4.6% |
 | 0.20 | 31.9% | 9.7% / 8.7% | 53.0% | 5.9% |
 | 0.25 | 40.8% | 12.3% / 10.4% | 56.3% | 6.9% |
 | 0.30 | 47.8% | 14.5% / 12.9% | 57.9% | 8.2% |
@@ -29,7 +29,7 @@ It is a modest, measured win on context headroom, not on cost. The extension shi
 
 **(d) What did not work.**
 - kev-0.8b local judge: AUC 0.509 with the `winnow` question, hid 0.1%. Dropped.
-- JevK5 v0.2.0: never scored a block below 0.1 (min 0.107), so it hid nothing at the shipped threshold, and it timed out at 15 s on large reads. Dropped.
+- JevK5 v0.2.0: never scored a block below 0.1 (min 0.107), so it hid nothing at drop 0.10, and it timed out at 15 s on large reads. Dropped.
 - Tier-1 replay labels and the lexical baseline: labels are lexical (a later edit reuses a line, a later read names a path, the answer quotes an identifier). A token-overlap baseline scores well by echoing the labeler, not by knowing need, while both judges sat at chance (AUC 0.478 hosted, 0.510 JevK5, n = 97). The baseline and the labels' role as ground truth were dropped.
 - Hosted Jev availability: HTTP 429 and 503 load shedding all day (session replay: 1,710 × 429 and 2,704 × 503 retries). Fail-opens were 401 of 3,941 eligible results in session replay and 20% of judge calls on SWE-bench. Some inputs 503 deterministically.
 
@@ -67,7 +67,7 @@ One `tool_result` hook (`extension/src/triage/`). It rewrites each result at ing
 1. Skip unless the tool is allowlisted (`read,bash,grep,find,ls,fetch_url,mcp*`) and the result is ≥ 2,000 chars. Unified diffs and JSON/JSONL bodies pass through unjudged (`skipStructured`), because a hole would break `git apply` or `jq`.
 2. Split into blocks of ≤ 25 lines and ≤ 1,500 chars. A longer single line is hard-split into ≤ 1,500-char pieces, and stubs and recall still address the whole line.
 3. Judge: one `noul` per block plus an error question answered by the model (P ≥ 0.5 keeps the whole result; no regex). Wording comes from `PI_JEV_QUESTION_SET` (default `winnow`). State is `{ task, tool, blocks }` in full text under a per-backend cap (`PI_JEV_STATE_CHARS`, 80k hosted, 24k local). Only the leading run of blocks that fits is judged; the rest stay visible. `maxBlocksPerCall` splits the blocks into sequential chunked calls under one deadline.
-4. `decide()`: the first and last block are always kept. Hide at P ≤ drop (0.10), keep at P ≥ keep (0.5), and leave the uncertain middle visible. Skip the rewrite if under 20% of chars would be hidden or the error gate fires. `drop` and `keep` can be set per judge in `settings.json` (`"pi-jev".judges.<name>`).
+4. `decide()`: the first and last block are always kept. Hide at P ≤ drop (0.15), keep at P ≥ keep (0.5), and leave the uncertain middle visible. Skip the rewrite if under 20% of chars would be hidden or the error gate fires. `drop` and `keep` can be set per judge in `settings.json` (`"pi-jev".judges.<name>`).
 5. Each hidden run becomes a `[pi-jev: hid lines …]` stub. Originals are cached for `pi_jev_recall`.
 
 Fail-open: a judge timeout (15 s) or error leaves the result untouched. `PI_JEV_SHADOW=1` (the default) decides and logs without mutating. Every decision is a `DecisionRecord` in `PI_JEV_LOG`.
