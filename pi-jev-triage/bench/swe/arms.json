@@ -1,0 +1,99 @@
+[
+  {
+    "name": "off",
+    "pi_flags": [
+      "--no-extensions",
+      "--no-context-files",
+      "--no-skills",
+      "--no-prompt-templates",
+      "--no-themes"
+    ],
+    "extension": null,
+    "env": {}
+  },
+  {
+    "name": "full",
+    "pi_flags": [
+      "--no-context-files",
+      "--no-prompt-templates",
+      "--no-themes"
+    ],
+    "extension": null,
+    "env": {}
+  },
+  {
+    "name": "triage-local",
+    "pi_flags": [
+      "--no-context-files",
+      "--no-prompt-templates",
+      "--no-themes"
+    ],
+    "extension": "../../extension/src/index.ts",
+    "env": {
+      "PI_JEV_FEATURES": "triage",
+      "PI_JEV_SHADOW": "0",
+      "PI_JEV_JUDGE": "local",
+      "PI_JEV_LOCAL_URL": "http://127.0.0.1:47412",
+      "PI_JEV_STATE_CHARS": "24000"
+    }
+  },
+  {
+    "name": "triage-vercel",
+    "pi_flags": [
+      "--no-context-files",
+      "--no-prompt-templates",
+      "--no-themes"
+    ],
+    "extension": "../../extension/src/index.ts",
+    "env": {
+      "PI_JEV_FEATURES": "triage",
+      "PI_JEV_SHADOW": "0",
+      "PI_JEV_JUDGE": "vercel"
+    }
+  },
+  {
+    "name": "triage-vercel-010",
+    "pi_flags": [
+      "--no-context-files",
+      "--no-prompt-templates",
+      "--no-themes"
+    ],
+    "extension": "../../extension/src/index.ts",
+    "env": {
+      "PI_JEV_FEATURES": "triage",
+      "PI_JEV_SHADOW": "0",
+      "PI_JEV_JUDGE": "vercel",
+      "PI_JEV_DROP": "0.10"
+    }
+  },
+  {
+    "name": "triage-vercel-015",
+    "pi_flags": [
+      "--no-context-files",
+      "--no-prompt-templates",
+      "--no-themes"
+    ],
+    "extension": "../../extension/src/index.ts",
+    "env": {
+      "PI_JEV_FEATURES": "triage",
+      "PI_JEV_SHADOW": "0",
+      "PI_JEV_JUDGE": "vercel",
+      "PI_JEV_DROP": "0.15"
+    }
+  },
+  {
+    "name": "triage-vercel-020",
+    "pi_flags": [
+      "--no-context-files",
+      "--no-prompt-templates",
+      "--no-themes"
+    ],
+    "extension": "../../extension/src/index.ts",
+    "env": {
+      "PI_JEV_FEATURES": "triage",
+      "PI_JEV_SHADOW": "0",
+      "PI_JEV_JUDGE": "vercel",
+      "PI_JEV_DROP": "0.20"
+    }
+  }
+]

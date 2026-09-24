@@ -1,0 +1,22 @@
+{
+  "name": "pi-jev-triage",
+  "version": "0.1.1",
+  "description": "Pi extension that uses the Jev decision model to hide the parts of large tool results the agent won't need, freeing context in long sessions.",
+  "keywords": ["pi-package", "pi", "jev", "context", "coding-agent"],
+  "license": "MIT",
+  "author": "Eugene Trapeznikov",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EugeneTrapeznikov/droidworks.git",
+    "directory": "pi-jev-triage"
+  },
+  "homepage": "https://github.com/EugeneTrapeznikov/droidworks/tree/main/pi-jev-triage",
+  "type": "module",
+  "files": ["extension/src/**/*.ts", "README.md", "LICENSE"],
+  "pi": {
+    "extensions": ["./extension/src/index.ts"]
+  },
+  "peerDependencies": {
+    "typebox": "*"
+  }
+}
