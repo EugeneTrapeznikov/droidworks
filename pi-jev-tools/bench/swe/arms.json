@@ -80,5 +80,20 @@
       "PI_JEV_JUDGE": "vercel",
       "PI_JEV_DROP": "0.15"
     }
+  },
+  {
+    "name": "triage-vercel-020",
+    "pi_flags": [
+      "--no-context-files",
+      "--no-prompt-templates",
+      "--no-themes"
+    ],
+    "extension": "../../extension/src/index.ts",
+    "env": {
+      "PI_JEV_FEATURES": "triage",
+      "PI_JEV_SHADOW": "0",
+      "PI_JEV_JUDGE": "vercel",
+      "PI_JEV_DROP": "0.20"
+    }
   }
 ]
