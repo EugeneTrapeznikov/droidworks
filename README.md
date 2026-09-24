@@ -14,6 +14,6 @@ Focused on making coding agents better at real software work: sharper tools, les
 
 - **[Pi](pi/)** — local Pi customization with theme-aware fullscreen selection and version-guarded patching.
 - **[Pi Footer Nerd Fonts](pi-footer-nerdfonts/)** — replaces Pi footer emojis with consistent Nerd Font glyphs.
-- **[Pi JEV Tools](pi-jev-tools/)** — just-in-time skill and tool selection for Pi's first turn; measured window breakdown, port design, benchmark plan.
+- **[Pi JEV Tools](pi-jev-tools/)** — tool-result triage for Pi: a Jev decision model hides the parts of big tool results the agent won't need, freeing up to 10% of context in long sessions with no drop in SWE-bench tasks solved.
 - **[TokenJuice + RTK](tokenjuice-rtk/)** — agent-harness integration that coordinates two token-saving tools, providing layered output optimization without double processing.
 - **[Open-source contributions](OPEN-SOURCE.md)** — the path from local workflow improvements to tested upstream contributions.
