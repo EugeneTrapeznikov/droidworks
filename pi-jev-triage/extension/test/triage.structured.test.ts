@@ -6,10 +6,10 @@ import type { JevConfig, Judge } from "../src/judge/types.ts";
 import { detectStructured, loadTriageConfig, makeHandler } from "../src/triage/core.ts";
 
 // Real `git diff` output from this repo.
-const GIT_DIFF = `diff --git a/pi-jev-tools/extension/src/settings.ts b/pi-jev-tools/extension/src/settings.ts
+const GIT_DIFF = `diff --git a/pi-jev-triage/extension/src/settings.ts b/pi-jev-triage/extension/src/settings.ts
 index b93f982..a7f3ad7 100644
---- a/pi-jev-tools/extension/src/settings.ts
-+++ b/pi-jev-tools/extension/src/settings.ts
+--- a/pi-jev-triage/extension/src/settings.ts
++++ b/pi-jev-triage/extension/src/settings.ts
 @@ -22,6 +22,7 @@ export interface JevSettings {
  		drop?: number;
  		keep?: number;
@@ -24,18 +24,18 @@ const GIT_SHOW = `commit e83367f8543a7a6995fcc1809a0c6255b664ab8b
 Author: A U Thor <author@example.com>
 Date:   Wed Sep 23 10:34:23 2026 -0700
 
-    docs(pi-jev-tools): add README, research notes, and session-mining scripts
+    docs(pi-jev-triage): add README, research notes, and session-mining scripts
 ---
- pi-jev-tools/README.md | 121 +++++++++++++++++++++++++++++++++++++++++++++++++
+ pi-jev-triage/README.md | 121 +++++++++++++++++++++++++++++++++++++++++++++++++
  1 file changed, 121 insertions(+)
 
-diff --git a/pi-jev-tools/README.md b/pi-jev-tools/README.md
+diff --git a/pi-jev-triage/README.md b/pi-jev-triage/README.md
 new file mode 100644
 index 0000000..a947a29
 --- /dev/null
-+++ b/pi-jev-tools/README.md
++++ b/pi-jev-triage/README.md
 @@ -0,0 +1,121 @@
-+# Pi JEV Tools
++# Pi JEV Triage
 +`;
 
 const PRETTY_JSON = JSON.stringify({ name: "pi-jev", version: "0.1.0", scripts: { test: "bun test" }, tags: ["a", "b"] }, null, 2);
@@ -55,7 +55,7 @@ export function load() {
 const LOG = `2026-09-23T10:00:01Z INFO server started on :8080
 2026-09-23T10:00:02Z WARN user@@host login retry @@ -1 +1 @@ not a hunk
 2026-09-23T10:00:03Z INFO request done in 12ms`;
-const MARKDOWN = `# Pi JEV Tools
+const MARKDOWN = `# Pi JEV Triage
 
 [Design](#design) is below.
 

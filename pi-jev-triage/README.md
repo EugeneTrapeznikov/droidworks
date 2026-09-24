@@ -1,6 +1,24 @@
-# Pi JEV Tools
+# Pi JEV Triage
 
 Tool-result triage for Pi, driven by a decision model. One capability: a large tool result is split into blocks, a Jev-style judge answers "is this block needed?" per block, and dead runs are hidden behind a stub the model can restore with `pi_jev_recall`. It is a port of [winnow](https://github.com/GhalebDweikat/winnow) onto Pi's `tool_result` event.
+
+## Install
+
+```bash
+pi install npm:pi-jev-triage
+```
+
+1. Get a [Vercel AI Gateway](https://vercel.com/ai-gateway/models/jev) key and set `VERCEL_API_KEY`, either in your shell or as a `VERCEL_API_KEY=...` line in `~/.config/vercel/.env`.
+2. The extension starts in shadow mode: it judges every large tool result and logs the decision, but hides nothing. To let it trim results, add this to `~/.pi/agent/settings.json`:
+
+   ```json
+   "pi-jev": { "shadow": false }
+   ```
+
+   or run Pi with `PI_JEV_SHADOW=0`.
+3. Start a new Pi session, or `/reload` a running one.
+
+Try it for one session without installing: `pi -e npm:pi-jev-triage`.
 
 ## Status (2026-09-24)
 
@@ -106,7 +124,7 @@ Measured, then deferred: ship one strong capability first. `src/judge/types.ts` 
 
 ## Files
 
-- `extension/`: the Pi extension (triage, judge backends, telemetry). Run `pi -e pi-jev-tools/extension/src/index.ts`; `bun test` in `extension/`.
+- `extension/`: the Pi extension (triage, judge backends, telemetry). Run `pi -e pi-jev-triage/extension/src/index.ts`; `bun test` in `extension/`.
 - `bench/replay/`: `bun run bench/replay/cli.ts <extract|judge|score|report> [--judge vercel|typesafe|local|mock] [--limit N] [--sample stratified] [--timeout-ms N] [--dry-run] [--yes]`. The deadline is `--timeout-ms`, else `PI_JEV_TIMEOUT_MS`, else 15000; `PI_JEV_BENCH_CONCURRENCY=1` against a single-threaded local sidecar. Cases and judged probabilities live under `~/.pi/agent/pi-jev/replay/` (verbatim session text, never in git).
 - `bench/live/`: `bun bench/live/run.ts --arms off,triage-local,triage-vercel`, then `bun bench/live/score.ts --in <dir>`.
 - `bench/swe/`: `arms.json` for the moa-harness runner.

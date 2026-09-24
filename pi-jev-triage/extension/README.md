@@ -109,4 +109,4 @@ The default follows the judge (`vercel`/`typesafe` 80000, `local` 24000); settin
 speed hint (keeps a JevK5 request inside its 4,096-token CUDA graph). For reference winnow defaults
 `WINNOW_MAX_STATE_CHARS` to 120,000 ([config.py@0bf46619](https://github.com/GhalebDweikat/winnow/blob/0bf46619daee883b278c7f42ee994f963d093321/sidecar/src/winnow/config.py)).
 
-Run: `pi -e pi-jev-tools/extension/src/index.ts`. With the user's global extensions discovered, `-e` was observed to register nothing, silently; pass `-ne` or `pi install` the extension, and confirm a decision record lands in `PI_JEV_LOG` before trusting a run.
+Run: `pi -e pi-jev-triage/extension/src/index.ts`. With the user's global extensions discovered, `-e` was observed to register nothing, silently; pass `-ne` or `pi install` the extension, and confirm a decision record lands in `PI_JEV_LOG` before trusting a run.

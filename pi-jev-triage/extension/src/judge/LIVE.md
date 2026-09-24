@@ -4,7 +4,7 @@ Probe: `extension/test/judge.live.ts`. Run with
 
 ```
 set -a; source ~/.config/vercel/.env; set +a
-bun run pi-jev-tools/extension/test/judge.live.ts
+bun run pi-jev-triage/extension/test/judge.live.ts
 ```
 
 ## Status: billed calls NOT run

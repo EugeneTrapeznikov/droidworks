@@ -37,7 +37,7 @@ prints whether it saw it.
 ```bash
 source ~/.config/vercel/.env                      # VERCEL_API_KEY, for judge=vercel
 cd <moa-harness>/bench
-ARMS=<droidworks>/pi-jev-tools/bench/swe/arms.json
+ARMS=<droidworks>/pi-jev-triage/bench/swe/arms.json
 
 # all 4 arms (80 rollouts); predictions are per arm under results/
 python run.py --host pi \

@@ -62,7 +62,7 @@ Overhead cost is $49 (all sessions) and $48 (> 20 calls). Net positional cost = 
 ## Command
 
 ```bash
-cd pi-jev-tools
+cd pi-jev-triage
 python3 scripts/project-triage-savings.py > projected.json   # every number above; ~10 s, read-only, stdlib
 python3 scripts/mine-corpus-triage.py | python3 -c "import json,sys; print(json.load(sys.stdin)['eligible_results'])"   # cross-check: 30914
 ```
