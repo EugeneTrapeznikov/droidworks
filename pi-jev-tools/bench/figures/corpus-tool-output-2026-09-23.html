@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tool Output Corpus</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+  --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,0.10);
+  --elig: #2a78d6; --rest: #c3c2b7;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+    --elig: #3987e5; --rest: #52514e;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781;
+  --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+  --elig: #3987e5; --rest: #52514e;
+}
+body { margin: 0; background: var(--page); color: var(--ink); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+.wrap { max-width: 880px; margin: 0 auto; padding: 24px 16px; }
+h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+.sub { color: var(--ink-2); margin: 0 0 20px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.tile, .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+.tile .v { font-size: 28px; font-weight: 600; }
+.tile .l { color: var(--ink-2); }
+.card { margin-bottom: 16px; }
+.card h2 { font-size: 15px; font-weight: 600; margin: 0 0 2px; }
+.card p { color: var(--ink-2); margin: 0 0 8px; }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; color: var(--ink-2); margin-bottom: 4px; }
+.legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; background: var(--c); }
+.plot { overflow-x: auto; }
+.plot svg { min-width: 600px; }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+svg text { font: 12px system-ui, -apple-system, "Segoe UI", sans-serif; fill: var(--ink-2); font-variant-numeric: tabular-nums; }
+svg .muted { fill: var(--muted); }
+svg .hit { fill: transparent; cursor: default; }
+svg .hit:hover + g path, svg .hit:focus + g path { filter: brightness(1.12); }
+.tip { position: fixed; pointer-events: none; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; box-shadow: 0 4px 16px rgba(0,0,0,.12); font-size: 12px; max-width: 260px; }
+.tip b { display: block; font-size: 14px; color: var(--ink); }
+.tip div { color: var(--ink-2); }
+details { color: var(--ink-2); }
+.tbl { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; margin-top: 8px; font-variant-numeric: tabular-nums; }
+th, td { text-align: right; padding: 4px 8px; border-bottom: 1px solid var(--grid); }
+th:first-child, td:first-child { text-align: left; }
+.foot { color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Most of an agent's context is tool output, and most of that can be triaged</h1>
+  <p class="sub">1,080 local Pi sessions, 125,235 tool results, 410M characters of tool output.</p>
+
+  <div class="tiles">
+    <div class="tile"><div class="v">95%</div><div class="l">of transcript characters are tool results</div></div>
+    <div class="tile"><div class="v">81%</div><div class="l">of tool-result characters are triage-eligible</div></div>
+    <div class="tile"><div class="v">25%</div><div class="l">of tool results are eligible (the large ones)</div></div>
+  </div>
+
+  <div class="card">
+    <h2>Tool-result characters by tool</h2>
+    <p>Eligible: allowlisted tool (read, bash, grep, find, ls, fetch_url, mcp*), not an error, ≥ 2,000 chars, ≥ 3 blocks.</p>
+    <div class="legend"><span style="--c: var(--elig)">Triage-eligible</span><span style="--c: var(--rest)">Not eligible</span></div>
+    <div class="plot"><svg id="bars" role="img" aria-label="Horizontal bars of tool-result characters by tool, eligible portion highlighted"></svg></div>
+  </div>
+
+  <div class="card">
+    <h2>Where the characters sit, by result size</h2>
+    <p>Share of all tool-result characters per size bin. Under each bin: its share of result count.</p>
+    <div class="legend"><span style="--c: var(--elig)">≥ 2,000 chars (size gate passes)</span><span style="--c: var(--rest)">&lt; 2,000 chars</span></div>
+    <div class="plot"><svg id="cols" role="img" aria-label="Columns of character share by tool-result size bin"></svg></div>
+  </div>
+
+  <details class="card">
+    <summary>Table view</summary>
+    <div class="tbl"><table id="tbl"><thead><tr><th>Tool</th><th>Results</th><th>Share of results</th><th>Chars</th><th>Share of chars</th><th>Eligible chars</th><th>Eligible share of tool</th></tr></thead><tbody></tbody></table></div>
+    <div class="tbl"><table id="tbl2"><thead><tr><th>Size bin (chars)</th><th>Results</th><th>Share of results</th><th>Chars</th><th>Share of chars</th></tr></thead><tbody></tbody></table></div>
+  </details>
+  <p class="foot">Source: scripts/mine-corpus-triage.py over ~/.pi/agent/sessions (top-level sessions &gt; 50 KB), 2026-09-23. Triage rule from extension/src/triage/core.ts. Details in corpus-2026-09-23.md.</p>
+</div>
+<div class="tip" id="tip" hidden></div>
+<script>
+const TOOLS = [["read",176889110,166332006,28999,18197],["bash",141816658,103361266,62706,8030],["fetch_url",41502250,39922201,5710,3671],["mcp*",22388595,21025628,2129,742],["other",22306081,56563,11502,11],["grep/find/ls",3924825,3431623,1718,221],["edit",1026014,0,9275,0],["write",320721,0,3196,0]];
+const BINS = [["<500",52812,8217677,false],["500–2k",35575,38305534,false],["2k–8k",23266,95918802,true],["8k–24k",10173,130785581,true],["24k–80k",3356,130706228,true],["≥80k",53,6240432,true]];
+const TOT_C = TOOLS.reduce((a, t) => a + t[1], 0), TOT_N = TOOLS.reduce((a, t) => a + t[3], 0);
+const NS = "http://www.w3.org/2000/svg";
+const pct = (x, d = 0) => (x > 0 && x < 0.01 && !d ? (x < 0.001 ? "<0.1" : (100 * x).toFixed(1)) : (100 * x).toFixed(d)) + "%";
+const M = (x) => (x / 1e6 >= 10 ? (x / 1e6).toFixed(0) : (x / 1e6).toFixed(1)) + "M";
+const fmt = (x) => x.toLocaleString("en-US");
+function el(tag, attrs, parent, text) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (text != null) e.textContent = text;
+  if (parent) parent.appendChild(e);
+  return e;
+}
+// Rounded data-end, square at the baseline (horizontal: right end rounded).
+function hbar(g, x, y, w, h, fill, roundEnd) {
+  if (w <= 0) return;
+  const r = roundEnd ? Math.min(4, w, h / 2) : 0;
+  el("path", { d: `M${x},${y}h${w - r}a${r},${r} 0 0 1 ${r},${r}v${h - 2 * r}a${r},${r} 0 0 1 ${-r},${r}h${-(w - r)}z`, fill }, g);
+}
+function vbar(g, x, y, w, h, fill) {
+  if (h <= 0) return;
+  const r = Math.min(4, h, w / 2);
+  el("path", { d: `M${x},${y + h}v${-(h - r)}a${r},${r} 0 0 1 ${r},${-r}h${w - 2 * r}a${r},${r} 0 0 1 ${r},${r}v${h - r}z`, fill }, g);
+}
+const tip = document.getElementById("tip");
+function bindTip(node, lines) {
+  const show = (ev) => {
+    tip.replaceChildren();
+    const b = document.createElement("b"); b.textContent = lines[0]; tip.appendChild(b);
+    for (const l of lines.slice(1)) { const d = document.createElement("div"); d.textContent = l; tip.appendChild(d); }
+    tip.hidden = false;
+    const r = ev.clientX != null ? { x: ev.clientX, y: ev.clientY } : (() => { const bb = node.getBoundingClientRect(); return { x: bb.right, y: bb.top }; })();
+    tip.style.left = Math.min(r.x + 12, innerWidth - tip.offsetWidth - 8) + "px";
+    tip.style.top = Math.max(8, r.y - tip.offsetHeight - 10) + "px";
+  };
+  node.setAttribute("tabindex", "0");
+  node.addEventListener("pointermove", show); node.addEventListener("focus", show);
+  node.addEventListener("pointerleave", () => (tip.hidden = true)); node.addEventListener("blur", () => (tip.hidden = true));
+}
+
+// Panel A: horizontal bars.
+(() => {
+  const svg = document.getElementById("bars");
+  const W = 820, L = 96, R = 210, rowH = 30, barH = 18, top = 8, n = TOOLS.length, H = top + n * rowH + 28;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const max = 180e6, x = (v) => L + (v / max) * (W - L - R);
+  for (let t = 0; t <= max; t += 30e6) {
+    el("line", { x1: x(t), x2: x(t), y1: top, y2: top + n * rowH, stroke: "var(--grid)", "stroke-width": 1 }, svg);
+    el("text", { x: x(t), y: top + n * rowH + 18, "text-anchor": "middle", class: "muted" }, svg, t ? `${t / 1e6}M` : "0");
+  }
+  el("line", { x1: L, x2: L, y1: top, y2: top + n * rowH, stroke: "var(--axis)", "stroke-width": 1 }, svg);
+  TOOLS.forEach(([name, c, e, nres, nel], i) => {
+    const y = top + i * rowH + (rowH - barH) / 2;
+    el("text", { x: L - 10, y: y + barH / 2 + 4, "text-anchor": "end", fill: "var(--ink)" }, svg, name);
+    const hit = el("rect", { class: "hit", x: 0, y: top + i * rowH, width: W, height: rowH }, svg);
+    const g = el("g", { "pointer-events": "none" }, svg);
+    const we = x(e) - L, wr = x(c) - x(e);
+    const gap = we > 0 && wr > 2 ? 2 : 0;
+    hbar(g, L, y, we, barH, "var(--elig)", wr <= 2);
+    hbar(g, L + we + gap, y, Math.max(0, wr - gap), barH, "var(--rest)", true);
+    const label = `${M(c)} · ${pct(c / TOT_C)} of chars` + (c ? ` · ${pct(e / c)} eligible` : "");
+    el("text", { x: x(c) + 8, y: y + barH / 2 + 4 }, g, label);
+    bindTip(hit, [`${pct(e / c)} eligible`, `${name}: ${fmt(c)} chars (${pct(c / TOT_C, 1)} of tool output)`, `eligible: ${fmt(e)} chars in ${fmt(nel)} results`, `${fmt(nres)} results (${pct(nres / TOT_N, 1)} of all)`]);
+  });
+})();
+
+// Panel B: size-bin columns.
+(() => {
+  const svg = document.getElementById("cols");
+  const W = 820, L = 48, R = 12, top = 20, ph = 170, H = top + ph + 48;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const max = 0.35, y = (v) => top + ph - (v / max) * ph, band = (W - L - R) / BINS.length, bw = 24;
+  for (let t = 0; t <= max + 1e-9; t += 0.1) {
+    el("line", { x1: L, x2: W - R, y1: y(t), y2: y(t), stroke: t ? "var(--grid)" : "var(--axis)", "stroke-width": 1 }, svg);
+    el("text", { x: L - 8, y: y(t) + 4, "text-anchor": "end", class: "muted" }, svg, pct(t));
+  }
+  BINS.forEach(([lab, n, c, big], i) => {
+    const cx = L + band * i + band / 2, s = c / TOT_C;
+    const hit = el("rect", { class: "hit", x: L + band * i, y: top, width: band, height: ph + 40 }, svg);
+    const g = el("g", { "pointer-events": "none" }, svg);
+    vbar(g, cx - bw / 2, y(s), bw, top + ph - y(s), big ? "var(--elig)" : "var(--rest)");
+    el("text", { x: cx, y: y(s) - 6, "text-anchor": "middle", fill: "var(--ink)" }, g, pct(s));
+    el("text", { x: cx, y: top + ph + 18, "text-anchor": "middle", fill: "var(--ink)" }, svg, lab);
+    el("text", { x: cx, y: top + ph + 34, "text-anchor": "middle", class: "muted" }, svg, `${pct(n / TOT_N)} of results`);
+    bindTip(hit, [`${pct(s, 1)} of chars`, `${lab} chars: ${fmt(n)} results (${pct(n / TOT_N, 1)})`, `${fmt(c)} chars`]);
+  });
+})();
+
+// Table view.
+const tb = document.querySelector("#tbl tbody");
+for (const [name, c, e, n] of TOOLS) {
+  const tr = tb.insertRow();
+  for (const v of [name, fmt(n), pct(n / TOT_N, 1), fmt(c), pct(c / TOT_C, 1), fmt(e), c ? pct(e / c, 1) : "–"]) tr.insertCell().textContent = v;
+}
+const tb2 = document.querySelector("#tbl2 tbody");
+for (const [lab, n, c] of BINS) {
+  const tr = tb2.insertRow();
+  for (const v of [lab, fmt(n), pct(n / TOT_N, 1), fmt(c), pct(c / TOT_C, 1)]) tr.insertCell().textContent = v;
+}
+</script>
+</body>
+</html>
