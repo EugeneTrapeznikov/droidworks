@@ -15,8 +15,9 @@ and billed tokens drop, resolve rate holds within noise.**
 | `full` | `--no-context-files --no-prompt-templates --no-themes` | — | — |
 | `triage-local` | same as `full` | `extension/src/index.ts` | `PI_JEV_FEATURES=triage PI_JEV_SHADOW=0 PI_JEV_JUDGE=local PI_JEV_LOCAL_URL=http://127.0.0.1:47412 PI_JEV_STATE_CHARS=24000` (JevK5 sidecar; judge timeout is the 15 s default) |
 | `triage-vercel` | same | same | `PI_JEV_FEATURES=triage PI_JEV_SHADOW=0 PI_JEV_JUDGE=vercel` |
+| `triage-vercel-010` / `-015` | same | same | `triage-vercel` + `PI_JEV_DROP=0.10` / `0.15` (drop-threshold sweep) |
 
-4 arms. `full` is the user's normal Pi (skills and installed extensions on) with
+6 arms. `full` is the user's normal Pi (skills and installed extensions on) with
 no pi-jev, so it is the control, not "all features on". Two deliberate choices:
 
 - **pi-jev arms carry `full`'s flags, not `off`'s.** Skills and installed

@@ -4,13 +4,13 @@ Tool-result triage for Pi, driven by a decision model. One capability: a large t
 
 ## Status (2026-09-23)
 
-On 20 long real sessions, hosted Jev triage freed 3.1% of context per call (p50) at the shipped 0.10 threshold and a projected 6.5% at 0.15 (aggregate; session p50 5.9%), at 65 cents of judge spend, with no task regressions on SWE-bench Lite 20.
+On 20 long real sessions, hosted Jev triage freed 3.1% of context per call (p50) at drop 0.10 and 6.5% (aggregate; session p50 5.9%) at drop 0.15, now the default, with the same 10/20 resolve rate on SWE-bench Lite 20 and a median of zero recall calls per task.
 
 It is a modest, measured win on context headroom, not on cost. The extension ships triage only ([extension/README.md](extension/README.md)) with hosted Jev (`vercel`) and drop 0.15. Evidence, cheapest first:
 
 **(a) Corpus** ([figures/corpus](bench/figures/corpus-2026-09-23.md)). Tool results are 95% of transcript chars, and 81.5% of tool-result chars pass the triage gates. So triage acts on almost all of the context.
 
-**(b) SWE-bench Lite 20, safety** ([bench/swe/RESULTS.md](bench/swe/RESULTS.md)). Resolved: `full` 9/20, `off` 9/20, `triage-vercel` 10/20 (sign test p = 1.0). Tokens and cost vs `full` are within noise (input+cacheRead −0.7%, p = 0.50). Triage adds about 11 s per task (median). It hid 16% of tool-result chars per task (p50), the model made 5 `pi_jev_recall` calls, and 20% of judge calls failed open (23/116). Side finding: `full` vs bare `off` Pi scores the same 9/20 at 3.2× tokens and 1.9× cost, all of it the skills and extensions prefix re-read every turn.
+**(b) SWE-bench Lite 20, safety** ([bench/swe/RESULTS.md](bench/swe/RESULTS.md)). Resolved: `full` 9/20, `off` 9/20, `triage-vercel` 10/20 (sign test p = 1.0); the threshold arms at 0.10 and 0.15 also resolved 10/20 each. Tokens and cost vs `full` are within noise (input+cacheRead −0.7%, p = 0.50). Triage adds about 11 s per task (median). It hid 16% of tool-result chars per task (p50), the model made 5 `pi_jev_recall` calls, and 20% of judge calls failed open (23/116). Side finding: `full` vs bare `off` Pi scores the same 9/20 at 3.2× tokens and 1.9× cost, all of it the skills and extensions prefix re-read every turn.
 
 **(c) Session replay, context** ([results](bench/session-replay/results-2026-09-23.md)). The top 20 sessions by model calls (15,261 calls) were replayed through hosted Jev on the recorded tool results, then the context was rebuilt offline. At 0.10, triage hid 10.2% of judged chars and freed 3.1% of context per call (session p50; 3.3% aggregate). Tokens saved: 4.70M input and 72.21M cacheRead. Judge spend was $0.65. Threshold sweep over the same judged probabilities:
 
@@ -21,9 +21,14 @@ It is a modest, measured win on context headroom, not on cost. The extension shi
 | 0.20 | 31.9% | 9.7% / 8.7% | 53.0% | 5.9% |
 | 0.25 | 40.8% | 12.3% / 10.4% | 56.3% | 6.9% |
 | 0.30 | 47.8% | 14.5% / 12.9% | 57.9% | 8.2% |
-| tier-3 at drop 0.15 | pending | | | |
 
-<!-- TODO threshold-arms -->
+SWE-bench Lite 20 at each threshold on the final code ([RESULTS.md](bench/swe/RESULTS.md#2026-09-23-threshold-arms-drop-010-vs-015-final-code)):
+
+| drop ≤ | resolved | tool-result chars hidden p50 | stubs | recalls | cost total (retail-equiv.) |
+|---|--:|--:|--:|--:|--:|
+| 0.10 / 0.15 | 10/20 / 10/20 | 8% / 19% | 22 / 49 | 4 / 6 | $3.23 / $2.78 |
+
+At 0.15 triage hid more than twice the chars at the same resolve rate, and no task that recalled a hidden block failed where a control passed.
 
 *Flagged*: some identifier from a hidden block shows up in the session's later assistant text or tool inputs. *Unique loss*: a returning identifier that the model could not have seen anywhere else at that moment (not in kept blocks, earlier messages, or compaction summaries). At 0.10, 75% of judged results were kept whole because under 20% of their chars would have been hidden. The prune ratio is not the lever here. Hosted Jev puts its block probabilities around a 0.20 median, and only 11% of blocks score ≤ 0.10, so few results have much to hide at that threshold. The drop threshold is what moves the hide rate: 0.15 doubles it while unique loss moves from 4.3% to 4.6%.
 
@@ -82,7 +87,7 @@ Cheapest first, same names as the bench code; aggregates only ([bench/README.md]
 
 1. **Replay** (`bench/replay/`). Offline, over local sessions. Ground truth is lexical (what the model did next), which turned out to be the weak point; see Status (d). [RESULTS.md](bench/replay/RESULTS.md).
 2. **Live** (`bench/live/`). Cold `pi -p` runs of a 30-prompt set against a fixed fixture repo. The fixture files are small, so triage rarely fires. [RESULTS.md](bench/live/RESULTS.md).
-3. **SWE-bench Lite 20** (`bench/swe/`). Paired per-task runs through the moa-harness runner, arms `off`, `full`, `triage-vercel`. [RESULTS.md](bench/swe/RESULTS.md).
+3. **SWE-bench Lite 20** (`bench/swe/`). Paired per-task runs through the moa-harness runner, arms `off`, `full`, `triage-vercel`, plus threshold arms `triage-vercel-010` / `-015`. [RESULTS.md](bench/swe/RESULTS.md).
 4. **Session replay** (`bench/session-replay/`). Real long sessions judged by hosted Jev, context rebuilt offline, plus a threshold sweep and two harm proxies. [results](bench/session-replay/results-2026-09-23.md).
 
 Rules: one pricing table and one telemetry version across arms. Tokens and call counts are ground truth; dollars are derived. `off` (full tool output) is the baseline; `mock` is a test-only judge, not an arm. Replay retries hosted-Jev 429/503 with backoff and trips a breaker; it never writes a fail-open answer as a result.
@@ -90,6 +95,8 @@ Rules: one pricing table and one telemetry version across arms. Tokens and call 
 ## Future ideas
 
 Measured, then deferred: ship one strong capability first. `src/judge/types.ts` keeps the `choice` / `score` question shapes and the `prefix` / `spec` feature literals for them. The modules are in git history.
+
+**Skip skill reads in triage.** Exclude reads under skill directories from triage: 4 of 10 recalls in the threshold arms were the model re-reading a skill file that triage had hidden.
 
 **Prefix diet.** At `before_agent_start`, keep the top-5 skills plus a names-only index and the base tools plus the top-3, with a "none needed" gate. Live smoke: first turn 16,252 → 6,957 tokens (−57%). Replay, kev: tool recall@5 32%; "none" precision/recall kev 76% / 96%. Gotchas: never return `{ systemPrompt }` from `before_agent_start` (it becomes `forceSystemPrompt` and rewrites the prefix every turn; mutate `systemPromptOptions` in place). On `gpt-5.6-sol` any tool-set change resends the tool array and busts the cache from token 0, so select tools once per session, add-only.
 

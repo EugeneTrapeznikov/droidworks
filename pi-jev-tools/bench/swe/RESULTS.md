@@ -6,7 +6,7 @@ Raw results (predictions, per-task decision logs) stay local in the runner's git
 
 Rig: `run.py --host pi --arms-config arms.json --model gpt-6-sol --provider openai-codex --workers 2`, arms run in order
 `full`, `off`, `triage-vercel`; `score.py --workers 2` (swebench 4.1.0, Docker, x86_64 images under emulation on arm64).
-Triage arm: `PI_JEV_SHADOW=0`, code defaults (`winnow` question set, tool in state, 15 s timeout, 80k state cap, drop 0.1).
+Triage arm: `PI_JEV_SHADOW=0`, `winnow` question set, tool in state, 15 s timeout, 80k state cap, drop 0.1.
 Tokens = `input + cacheRead + output` per task. Cost is Pi's retail-equivalent estimate; the runs used subscription
 capacity, nothing was billed at these rates.
 
@@ -47,7 +47,7 @@ in full (that judge call failed open). That test module depends on live httpbin,
   deltas vs `full` are inside noise. Per-task median it added ~11 s wall and ~2 model calls.
 - **`full` vs `off`:** same 9/20 at 3.2× tokens and 1.9× cost. The difference is the skills + installed-extension
   prefix re-read every turn (cacheRead p50 214k vs 45k), not extra work.
-- **`triage-local`: not run.** Dropped: JevK5 (remote GPU host, sidecar `:47412`) hid nothing at the shipped 0.1 drop threshold
+- **`triage-local`: not run.** Dropped: JevK5 (remote GPU host, sidecar `:47412`) hid nothing at the 0.1 drop threshold
   (min block P 0.107 over 72 judged blocks in two smokes) and timed out at 15 s on large reads.
 
 ### Bench bugs fixed on this run
@@ -58,3 +58,21 @@ in full (that judge call failed open). That test module depends on live httpbin,
 - **arm64 SWE-bench images counted as fails.** swebench pulls eval images for the host platform; on Apple Silicon that
   404s and every instance was scored as an error, reported as unresolved. `score.py` now pre-pulls the
   `linux/amd64` images on arm64 and exits non-zero whenever the harness reports errored instances.
+
+### 2026-09-23: Threshold arms (drop 0.10 vs 0.15), final code
+
+Same rig and 20 tasks, arms `triage-vercel-010` and `triage-vercel-015` (`PI_JEV_DROP` pinned per arm, see
+[README.md](README.md)), run on the final extension code. Cost is retail-equivalent, as above.
+
+| arm | resolved | vs `full` / `off` | tokens p50 | wall p50 | calls p50 | cost p50 / total (retail-equiv.) | chars hidden p50 | stubs | recalls | fail-open |
+|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|
+| `triage-vercel-010` | 10/20 | +1/−0, +1/−0 | 212,536 | 70 s | 12 | $0.099 / $3.23 | 8% | 22 | 4 | 32/114 |
+| `triage-vercel-015` | 10/20 | +1/−0, +1/−0 | 209,514 | 76 s | 13 | $0.109 / $2.78 | 19% | 49 | 6 | 28/112 |
+
+Flips are paired against `full` (9/20) and `off` (9/20); sign p = 1.0 for all four. Both arms resolve the same 10 tasks.
+
+- **No recall-linked failure.** No task that recalled a hidden block failed where a control passed.
+- **Skill-file recalls.** 4 of the 10 recalls were the model re-reading its own skill file after triage hid part of it.
+- **Caveats.** The `full` and `off` controls come from the earlier three-arm run on older code, not a same-day rerun.
+  Fail-open was 25–28% of judge calls, driven by upstream hosted-Jev errors, so both arms judged fewer results than
+  a healthy gateway would.

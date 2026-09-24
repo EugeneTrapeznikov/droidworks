@@ -38,7 +38,7 @@ Skeleton only. Every number comes from the files under `bench/`; aggregates only
 - Threshold sweep 0.10 → 0.30: context saved 3.3% → 14.5% (aggregate). Loose flagged 38.6% → 57.9%, strict unique loss 4.3% → 8.2%.
 - Define the two proxies. Flagged: an identifier from the hidden block comes back later. Unique loss: that identifier was visible nowhere else when it came back.
 - 75% of judged results were kept whole under the 20% prune ratio. The drop threshold is the lever, not the ratio: hosted Jev's block P median is 0.20, and only 11% of blocks are ≤ 0.10.
-- TODO: tier-3 SWE-bench result at drop 0.15. <!-- TODO threshold-arms -->
+- Tier 3 at drop 0.15, now the default: 10/20 resolved, same as 0.10, with 19% vs 8% of tool-result chars hidden per task (p50) and 6 vs 4 recalls. 4 of 10 recalls re-read a hidden skill file.
 
 ## Surprise: full Pi vs bare Pi
 
