@@ -21,7 +21,7 @@ assert spec.loader
 spec.loader.exec_module(module)
 
 (package / "dist/bundle/chunks").mkdir(parents=True)
-(package / "dist/modes/interactive").mkdir(parents=True)
+(package / "dist/modes/interactive/theme").mkdir(parents=True)
 (package / "node_modules/@earendil-works/pi-tui/dist").mkdir(parents=True)
 (package / "package.json").write_text(json.dumps({"version": "99.1.2"}))
 (package / "node_modules/@earendil-works/pi-tui/package.json").write_text(
@@ -53,14 +53,24 @@ export class TuiAltScreen {
     "export declare class TuiAltScreen {\n" + module.DTS_FIELD_OLD + "}\n"
 )
 (package / "dist/modes/interactive/tui-renderer.js").write_text(
-    "function createInteractiveTui(terminal, options, theme) {\n" + module.RENDERER_OLD + "    return null;\n}\n"
+    "function createInteractiveTui(terminal, options, theme) {\n" + module.RENDERER_PREVIOUS + "    return null;\n}\n"
 )
+for name, text in {
+    "theme.js": module.THEME_FALLBACK_OLD + module.THEME_BG_KEYS_OLD,
+    "theme-json.js": module.THEME_JSON_OLD,
+    "theme.d.ts": "\n".join((module.THEME_TYPES_FG_OLD, module.THEME_TYPES_BG_OLD,
+                           module.THEME_TYPES_OPTIONAL_FG_OLD, module.THEME_TYPES_OPTIONAL_BG_OLD)),
+    "theme-json.d.ts": module.THEME_JSON_TYPES_OLD,
+    "theme-schema.json": module.THEME_SCHEMA_OLD,
+}.items():
+    (package / "dist/modes/interactive/theme" / name).write_text(text)
 (package / "dist/bundle/chunks/chunk-fixture.js").write_text(
     "class TuiAltScreen{" + module.BUNDLE_FIELDS_OLD
     + "constructor(options={}){" + module.BUNDLE_CONSTRUCTOR_OLD + "}"
     + module.BUNDLE_HIGHLIGHT_ORIGINAL + "}\n"
     + "function createInteractiveTui(terminal,options,theme){"
-    + module.BUNDLE_RENDERER_OLD + "(text)}}\n"
+    + module.BUNDLE_RENDERER_PREVIOUS + "(text)}}\n"
+    + module.BUNDLE_FALLBACK_OLD + module.BUNDLE_BG_KEYS_OLD + module.BUNDLE_JSON_OLD
 )
 PY
 
@@ -99,7 +109,7 @@ const fallback = new TuiAltScreen();
 assert.equal(fallback.applySelectionHighlight("plain"), "\x1b[7mplain\x1b[27m");
 JS
 
-grep -q 'theme.bg("selectedBg", theme.fg("text", text))' "$PKG/dist/modes/interactive/tui-renderer.js"
+grep -q 'theme.bg("fullscreenSelectionColor", theme.fg("fullscreenSelectionTextColor", text))' "$PKG/dist/modes/interactive/tui-renderer.js"
 ! grep -R -q '215;218;224;48;2;62;68;81' \
   "$PKG/dist/modes/interactive/tui-renderer.js" \
   "$PKG/dist/bundle/chunks" \
@@ -111,7 +121,7 @@ from pathlib import Path
 import sys
 path = Path(sys.argv[1])
 text = path.read_text()
-old = 'selectionStyle: (text) => theme.bg("selectedBg", theme.fg("text", text)),'
+old = 'selectionStyle: (text) => theme.bg("fullscreenSelectionColor", theme.fg("fullscreenSelectionTextColor", text)),'
 assert text.count(old) == 1
 path.write_text(text.replace(old, "selectionStyle: (text) => text,", 1))
 PY

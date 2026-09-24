@@ -6,7 +6,7 @@ index 86c634c..f663651 100644
  	if (options.tuiMode === "fullscreen") {
  		const styleSearchMatch = (text: string) => theme.bg("searchMatchBg", theme.fg("searchMatchText", text));
  		return new TuiAltScreen(terminal, options.showHardwareCursor, options.logDirectory, {
-+			selectionStyle: (text) => theme.bg("selectedBg", theme.fg("text", text)),
++			selectionStyle: (text) => theme.bg("fullscreenSelectionColor", theme.fg("fullscreenSelectionTextColor", text)),
  			searchMatchStyle: (text) => theme.underline(styleSearchMatch(text)),
  			searchCurrentMatchStyle: (text) => theme.bold(theme.inverse(styleSearchMatch(text))),
  			searchNavigationButtonStyle: (text, hovered) => (hovered ? theme.underline(text) : text),

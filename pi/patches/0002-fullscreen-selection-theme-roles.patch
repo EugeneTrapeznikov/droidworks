@@ -1,0 +1,86 @@
+diff --git a/packages/coding-agent/src/modes/interactive/theme/theme.ts b/packages/coding-agent/src/modes/interactive/theme/theme.ts
+--- a/packages/coding-agent/src/modes/interactive/theme/theme.ts
++++ b/packages/coding-agent/src/modes/interactive/theme/theme.ts
+@@ -50,6 +50,7 @@
+ 	| "dim"
+ 	| "text"
+ 	| "thinkingText"
++	| "fullscreenSelectionTextColor"
+ 	| "scrollbarTrack"
+ 	| "scrollbarThumb"
+ 	| "searchMatchText"
+@@ -91,6 +92,7 @@
+ 
+ export type ThemeBg =
+ 	| "selectedBg"
++	| "fullscreenSelectionColor"
+ 	| "searchMatchBg"
+ 	| "userMessageBg"
+ 	| "customMessageBg"
+@@ -98,8 +100,8 @@
+ 	| "toolSuccessBg"
+ 	| "toolErrorBg";
+ 
+-type OptionalThemeColor = "scrollbarTrack" | "scrollbarThumb" | "thinkingMax" | "searchMatchText";
+-type OptionalThemeBg = "searchMatchBg";
++type OptionalThemeColor = "scrollbarTrack" | "scrollbarThumb" | "thinkingMax" | "searchMatchText" | "fullscreenSelectionTextColor";
++type OptionalThemeBg = "searchMatchBg" | "fullscreenSelectionColor";
+ 
+ type ColorMode = "truecolor" | "256color";
+ 
+@@ -264,6 +266,8 @@
+ 	thinkingMax: ColorValue;
+ 	searchMatchBg: ColorValue;
+ 	searchMatchText: ColorValue;
++	fullscreenSelectionColor: ColorValue;
++	fullscreenSelectionTextColor: ColorValue;
+ } {
+ 	return {
+ 		...colors,
+@@ -272,6 +276,8 @@
+ 		thinkingMax: colors.thinkingMax ?? colors.thinkingXhigh,
+ 		searchMatchBg: colors.searchMatchBg ?? colors.selectedBg,
+ 		searchMatchText: colors.searchMatchText ?? colors.text,
++		fullscreenSelectionColor: colors.fullscreenSelectionColor ?? colors.selectedBg,
++		fullscreenSelectionTextColor: colors.fullscreenSelectionTextColor ?? colors.text,
+ 	};
+ }
+ 
+@@ -532,6 +538,7 @@
+ 	const bgColors: Record<ThemeBg, string | number> = {} as Record<ThemeBg, string | number>;
+ 	const bgColorKeys: Set<string> = new Set([
+ 		"selectedBg",
++		"fullscreenSelectionColor",
+ 		"searchMatchBg",
+ 		"userMessageBg",
+ 		"customMessageBg",
+diff --git a/packages/coding-agent/src/modes/interactive/theme/theme-json.ts b/packages/coding-agent/src/modes/interactive/theme/theme-json.ts
+--- a/packages/coding-agent/src/modes/interactive/theme/theme-json.ts
++++ b/packages/coding-agent/src/modes/interactive/theme/theme-json.ts
+@@ -37,6 +37,8 @@
+ 		scrollbarThumb: Type.Optional(ColorValueSchema),
+ 		// Backgrounds & Content Text (11 required, 2 optional)
+ 		selectedBg: ColorValueSchema,
++		fullscreenSelectionColor: Type.Optional(ColorValueSchema),
++		fullscreenSelectionTextColor: Type.Optional(ColorValueSchema),
+ 		searchMatchBg: Type.Optional(ColorValueSchema),
+ 		searchMatchText: Type.Optional(ColorValueSchema),
+ 		userMessageBg: ColorValueSchema,
+diff --git a/packages/coding-agent/src/modes/interactive/theme/theme-schema.json b/packages/coding-agent/src/modes/interactive/theme/theme-schema.json
+--- a/packages/coding-agent/src/modes/interactive/theme/theme-schema.json
++++ b/packages/coding-agent/src/modes/interactive/theme/theme-schema.json
+@@ -137,6 +137,14 @@
+ 					"$ref": "#/$defs/colorValue",
+ 					"description": "Selected item background"
+ 				},
++				"fullscreenSelectionColor": {
++					"$ref": "#/$defs/colorValue",
++					"description": "Fullscreen transcript selection background (falls back to selectedBg)"
++				},
++				"fullscreenSelectionTextColor": {
++					"$ref": "#/$defs/colorValue",
++					"description": "Fullscreen transcript selection text (falls back to text)"
++				},
+ 				"scrollbarTrack": {
+ 					"$ref": "#/$defs/colorValue",
+ 					"description": "Fullscreen scrollbar track foreground (falls back to muted when omitted)"

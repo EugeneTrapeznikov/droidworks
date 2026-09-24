@@ -106,9 +106,60 @@ DTS_FIELD_NEW = '''    private readonly searchNavigationButtonStyle;
 RENDERER_OLD = '''        return new TuiAltScreen(terminal, options.showHardwareCursor, options.logDirectory, {
             searchMatchStyle: (text) => theme.underline(styleSearchMatch(text)),
 '''
-RENDERER_NEW = '''        return new TuiAltScreen(terminal, options.showHardwareCursor, options.logDirectory, {
-            selectionStyle: (text) => theme.bg("selectedBg", theme.fg("text", text)),
-            searchMatchStyle: (text) => theme.underline(styleSearchMatch(text)),
+RENDERER_PREVIOUS = RENDERER_OLD.replace(
+    '            searchMatchStyle:',
+    '            selectionStyle: (text) => theme.bg("selectedBg", theme.fg("text", text)),\n            searchMatchStyle:',
+)
+RENDERER_NEW = RENDERER_OLD.replace(
+    '            searchMatchStyle:',
+    '            selectionStyle: (text) => theme.bg("fullscreenSelectionColor", theme.fg("fullscreenSelectionTextColor", text)),\n            searchMatchStyle:',
+)
+
+THEME_FALLBACK_OLD = '''        searchMatchText: colors.searchMatchText ?? colors.text,
+'''
+THEME_FALLBACK_NEW = THEME_FALLBACK_OLD + '''        fullscreenSelectionColor: colors.fullscreenSelectionColor ?? colors.selectedBg,
+        fullscreenSelectionTextColor: colors.fullscreenSelectionTextColor ?? colors.text,
+'''
+THEME_BG_KEYS_OLD = '''        "selectedBg",
+        "searchMatchBg",
+'''
+THEME_BG_KEYS_NEW = '''        "selectedBg",
+        "fullscreenSelectionColor",
+        "searchMatchBg",
+'''
+THEME_JSON_OLD = '''        selectedBg: ColorValueSchema,
+        searchMatchBg: Type.Optional(ColorValueSchema),
+'''
+THEME_JSON_NEW = '''        selectedBg: ColorValueSchema,
+        fullscreenSelectionColor: Type.Optional(ColorValueSchema),
+        fullscreenSelectionTextColor: Type.Optional(ColorValueSchema),
+        searchMatchBg: Type.Optional(ColorValueSchema),
+'''
+THEME_TYPES_FG_OLD = '"thinkingText" | "scrollbarTrack"'
+THEME_TYPES_FG_NEW = '"thinkingText" | "fullscreenSelectionTextColor" | "scrollbarTrack"'
+THEME_TYPES_BG_OLD = '"selectedBg" | "searchMatchBg"'
+THEME_TYPES_BG_NEW = '"selectedBg" | "fullscreenSelectionColor" | "searchMatchBg"'
+THEME_TYPES_OPTIONAL_FG_OLD = '"thinkingMax" | "searchMatchText"'
+THEME_TYPES_OPTIONAL_FG_NEW = '"thinkingMax" | "searchMatchText" | "fullscreenSelectionTextColor"'
+THEME_TYPES_OPTIONAL_BG_OLD = 'type OptionalThemeBg = "searchMatchBg";'
+THEME_TYPES_OPTIONAL_BG_NEW = 'type OptionalThemeBg = "searchMatchBg" | "fullscreenSelectionColor";'
+THEME_JSON_TYPES_OLD = '        selectedBg: Type.TUnion<[Type.TString, Type.TInteger]>;'
+THEME_JSON_TYPES_NEW = THEME_JSON_TYPES_OLD + '''
+        fullscreenSelectionColor: Type.TOptional<Type.TUnion<[Type.TString, Type.TInteger]>>;
+        fullscreenSelectionTextColor: Type.TOptional<Type.TUnion<[Type.TString, Type.TInteger]>>;'''
+THEME_SCHEMA_OLD = '''\t\t\t\t"selectedBg": {
+\t\t\t\t\t"$ref": "#/$defs/colorValue",
+\t\t\t\t\t"description": "Selected item background"
+\t\t\t\t},
+'''
+THEME_SCHEMA_NEW = THEME_SCHEMA_OLD + '''\t\t\t\t"fullscreenSelectionColor": {
+\t\t\t\t\t"$ref": "#/$defs/colorValue",
+\t\t\t\t\t"description": "Fullscreen transcript selection background (falls back to selectedBg)"
+\t\t\t\t},
+\t\t\t\t"fullscreenSelectionTextColor": {
+\t\t\t\t\t"$ref": "#/$defs/colorValue",
+\t\t\t\t\t"description": "Fullscreen transcript selection text (falls back to text)"
+\t\t\t\t},
 '''
 
 BUNDLE_FIELDS_OLD = "searchMatchStyle;searchCurrentMatchStyle;searchNavigationButtonStyle;scrollToEndIndicator;"
@@ -119,7 +170,18 @@ BUNDLE_HIGHLIGHT_ORIGINAL = r'''applySelectionHighlight(text){let result="\x1B[7
 BUNDLE_HIGHLIGHT_HARDCODED = r'''applySelectionHighlight(text){let selectionStyle="\x1B[38;2;215;218;224;48;2;62;68;81m",result=selectionStyle,index3=0;for(;index3<text.length;){let ansi=extractAnsiCode(text,index3);if(!ansi){result+=text[index3],index3+=1;continue}result+=ansi.code,ansi.code.endsWith("m")&&(result+=selectionStyle),index3+=ansi.length}return`${result}\x1B[39;49m`}'''
 BUNDLE_HIGHLIGHT_NEW = r'''applySelectionHighlight(text){let result="",plainStart=0,index3=0;for(;index3<text.length;){let ansi=extractAnsiCode(text,index3);if(!ansi){index3+=1;continue}index3>plainStart&&(result+=this.selectionStyle(text.slice(plainStart,index3))),result+=ansi.code,index3+=ansi.length,plainStart=index3}return plainStart<text.length&&(result+=this.selectionStyle(text.slice(plainStart))),result}'''
 BUNDLE_RENDERER_OLD = '''return new TuiAltScreen(terminal,options.showHardwareCursor,options.logDirectory,{searchMatchStyle:text=>theme.underline'''
-BUNDLE_RENDERER_NEW = '''return new TuiAltScreen(terminal,options.showHardwareCursor,options.logDirectory,{selectionStyle:text=>theme.bg("selectedBg",theme.fg("text",text)),searchMatchStyle:text=>theme.underline'''
+BUNDLE_RENDERER_PREVIOUS = BUNDLE_RENDERER_OLD.replace(
+    'searchMatchStyle:', 'selectionStyle:text=>theme.bg("selectedBg",theme.fg("text",text)),searchMatchStyle:'
+)
+BUNDLE_RENDERER_NEW = BUNDLE_RENDERER_OLD.replace(
+    'searchMatchStyle:', 'selectionStyle:text=>theme.bg("fullscreenSelectionColor",theme.fg("fullscreenSelectionTextColor",text)),searchMatchStyle:'
+)
+BUNDLE_FALLBACK_OLD = 'searchMatchText:colors.searchMatchText??colors.text}}'
+BUNDLE_FALLBACK_NEW = 'searchMatchText:colors.searchMatchText??colors.text,fullscreenSelectionColor:colors.fullscreenSelectionColor??colors.selectedBg,fullscreenSelectionTextColor:colors.fullscreenSelectionTextColor??colors.text}}'
+BUNDLE_BG_KEYS_OLD = 'bgColorKeys=new Set(["selectedBg","searchMatchBg"'
+BUNDLE_BG_KEYS_NEW = 'bgColorKeys=new Set(["selectedBg","fullscreenSelectionColor","searchMatchBg"'
+BUNDLE_JSON_OLD = 'selectedBg:ColorValueSchema,searchMatchBg:typebox_exports.Optional(ColorValueSchema)'
+BUNDLE_JSON_NEW = 'selectedBg:ColorValueSchema,fullscreenSelectionColor:typebox_exports.Optional(ColorValueSchema),fullscreenSelectionTextColor:typebox_exports.Optional(ColorValueSchema),searchMatchBg:typebox_exports.Optional(ColorValueSchema)'
 
 
 def fail(message: str) -> "None":
@@ -155,7 +217,7 @@ def replace_alternative(path: Path, originals: tuple[str, ...], patched: str, ch
     text = path.read_text()
     patched_count = text.count(patched)
     original_counts = [text.count(original) for original in originals]
-    if patched_count == 1 and sum(original_counts) == 0:
+    if patched_count == 1 and all(text.count(original) == patched.count(original) for original in originals):
         return "verified"
     if patched_count != 0 or sum(original_counts) != 1:
         fail(
@@ -201,11 +263,23 @@ def main() -> int:
         (module, (MODULE_HIGHLIGHT_ORIGINAL, MODULE_HIGHLIGHT_HARDCODED), MODULE_HIGHLIGHT_NEW, "pi-tui selection renderer"),
         (declaration, (DTS_OPTION_OLD,), DTS_OPTION_NEW, "pi-tui selection option declaration"),
         (declaration, (DTS_FIELD_OLD,), DTS_FIELD_NEW, "pi-tui selection field declaration"),
-        (renderer, (RENDERER_OLD,), RENDERER_NEW, "coding-agent theme wiring"),
+        (renderer, (RENDERER_OLD, RENDERER_PREVIOUS), RENDERER_NEW, "coding-agent theme wiring"),
+        (package_dir / "dist/modes/interactive/theme/theme.js", (THEME_FALLBACK_OLD,), THEME_FALLBACK_NEW, "theme selection fallbacks"),
+        (package_dir / "dist/modes/interactive/theme/theme.js", (THEME_BG_KEYS_OLD,), THEME_BG_KEYS_NEW, "theme selection background"),
+        (package_dir / "dist/modes/interactive/theme/theme-json.js", (THEME_JSON_OLD,), THEME_JSON_NEW, "theme selection roles"),
+        (package_dir / "dist/modes/interactive/theme/theme.d.ts", (THEME_TYPES_FG_OLD,), THEME_TYPES_FG_NEW, "theme foreground type"),
+        (package_dir / "dist/modes/interactive/theme/theme.d.ts", (THEME_TYPES_BG_OLD,), THEME_TYPES_BG_NEW, "theme background type"),
+        (package_dir / "dist/modes/interactive/theme/theme.d.ts", (THEME_TYPES_OPTIONAL_FG_OLD,), THEME_TYPES_OPTIONAL_FG_NEW, "optional theme foreground type"),
+        (package_dir / "dist/modes/interactive/theme/theme.d.ts", (THEME_TYPES_OPTIONAL_BG_OLD,), THEME_TYPES_OPTIONAL_BG_NEW, "optional theme background type"),
+        (package_dir / "dist/modes/interactive/theme/theme-json.d.ts", (THEME_JSON_TYPES_OLD,), THEME_JSON_TYPES_NEW, "theme JSON types"),
+        (package_dir / "dist/modes/interactive/theme/theme-schema.json", (THEME_SCHEMA_OLD,), THEME_SCHEMA_NEW, "theme JSON schema"),
         (bundle, (BUNDLE_FIELDS_OLD,), BUNDLE_FIELDS_NEW, "bundled selection field"),
         (bundle, (BUNDLE_CONSTRUCTOR_OLD,), BUNDLE_CONSTRUCTOR_NEW, "bundled selection option"),
         (bundle, (BUNDLE_HIGHLIGHT_ORIGINAL, BUNDLE_HIGHLIGHT_HARDCODED), BUNDLE_HIGHLIGHT_NEW, "bundled selection renderer"),
-        (bundle, (BUNDLE_RENDERER_OLD,), BUNDLE_RENDERER_NEW, "bundled theme wiring"),
+        (bundle, (BUNDLE_RENDERER_OLD, BUNDLE_RENDERER_PREVIOUS), BUNDLE_RENDERER_NEW, "bundled theme wiring"),
+        (bundle, (BUNDLE_FALLBACK_OLD,), BUNDLE_FALLBACK_NEW, "bundled selection fallbacks"),
+        (bundle, (BUNDLE_BG_KEYS_OLD,), BUNDLE_BG_KEYS_NEW, "bundled selection background"),
+        (bundle, (BUNDLE_JSON_OLD,), BUNDLE_JSON_NEW, "bundled selection roles"),
     ]
     statuses = [replace_alternative(path, originals, patched, args.check, label) for path, originals, patched, label in changes]
     action = "verified" if args.check else ("applied" if "applied" in statuses else "already applied")
