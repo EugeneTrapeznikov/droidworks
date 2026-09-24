@@ -11,5 +11,4 @@ subagent-artifacts/
 **/local-judge/*.jsonl
 .venv/
 node_modules/
-**/bench/session-replay/results-*.md
 **/bench/session-replay/flagged-*
