@@ -76,3 +76,25 @@ Flips are paired against `full` (9/20) and `off` (9/20); sign p = 1.0 for all fo
 - **Caveats.** The `full` and `off` controls come from the earlier three-arm run on older code, not a same-day rerun.
   Fail-open was 25–28% of judge calls, driven by upstream hosted-Jev errors, so both arms judged fewer results than
   a healthy gateway would.
+
+### 2026-09-24: Threshold arm drop 0.20
+
+Same rig, 20 tasks, and extension code as the 0.10/0.15 arms; arm `triage-vercel-020`. One task hit a transient
+acting-model auth error after 8 s and was rerun alone. All three rows below are recomputed the same way from the
+per-instance metrics.
+
+| drop ≤ | resolved | input+cacheRead p50 | cost total (retail-equiv.) | triage bytes hidden | stubs | recalls (tasks) | fail-open |
+|---|--:|--:|--:|--:|--:|--:|--:|
+| 0.10 | 10/20 | 210,754 | $3.23 | 69,207 | 22 | 4 (4) | 32/114 |
+| 0.15 | 10/20 | 207,643 | $2.78 | 130,183 | 49 | 6 (4) | 28/112 |
+| 0.20 | 10/20 | 208,219 | $2.57 | 152,795 | 49 | 8 (5) | 32/113 |
+
+- **Same 10 tasks resolved** at all three thresholds, so no recall-linked failure at 0.20 either.
+- **0.20 barely hides more than 0.15 here**: +17% bytes, the same 49 stubs, and a per-task hide share that matches
+  0.15. The session replay predicted +52% (31.9% vs 21.0% of judged chars). Of the 50 blocks scoring in
+  (0.15, 0.20], 22 are a pinned first/last block, 22 were hidden,
+  5 sat in results kept whole by the 20% prune ratio, and 1 was kept by the error gate. SWE-bench tool results are
+  short, so pinning covers a large share of their blocks.
+- **Recalls rise** from 6 to 8, and tokens and cost stay within noise.
+- Conclusion: on this set 0.20 buys almost nothing over 0.15. The default stays 0.15; the session-replay context
+  numbers for 0.20 hold only for long sessions with large reads.
