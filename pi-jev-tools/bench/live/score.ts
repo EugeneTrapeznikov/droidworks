@@ -167,7 +167,7 @@ export function renderMarkdown(scores: ArmScore[], set: RoutingSet, dir: string,
     L.push("|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|");
     for (const s of triaged) {
       const t = s.triage;
-      L.push(`| \`${s.arm}\` | ${t.decisions} | ${ms(s.judgeP50)} | ${ms(s.judgeP95)} | ${t.bytesBefore.toLocaleString()} | ${t.bytesAfter.toLocaleString()} | ${pc(t.hiddenPct)} | ${t.pruned} | ${t.errorGate} | ${t.skipRatio} | ${t.failOpen} | ${n0(s.stubsPerRun, 1)} | ${n0(s.recallPerRun, 2)} |`);
+      L.push(`| \`${s.arm}\` | ${t.decisions} | ${ms(s.judgeP50)} | ${ms(s.judgeP95)} | ${t.bytesBefore.toLocaleString()} | ${t.bytesAfter.toLocaleString()} | ${pc(t.hiddenPct)} | ${t.pruned} | ${t.errorGate} | ${t.skipRatio} | ${t.failOpen} | ${n0(s.stubsPerRun, 2)} | ${n0(s.recallPerRun, 2)} |`);
     }
     L.push("");
   }
