@@ -75,7 +75,7 @@ moved to the root README, Future ideas.
 ## Head to head
 
 Same sampled cases, one column per judge. `local` is the kev-0.8b sidecar
-(`local-judge/server.py --engine kev`, `KEV_TEMPERATURE=1.3`);
+(`KEV_TEMPERATURE=1.3`);
 `mock` is the deterministic noise floor. **The `vercel` column (hosted Jev) is pending a
 Vercel card** — the `judge --judge vercel` commands below are ready and unchanged.
 
@@ -158,23 +158,6 @@ bun run bench/replay/cli.ts judge --judge vercel --sample stratified --limit 200
 bun run bench/replay/cli.ts judge --judge vercel --yes   # full, over the $5 refusal ceiling
 ```
 
-## Reproducing the local (kev) column
-
-```sh
-# 1. kev itself (clone anywhere), MLX on Apple Silicon
-KEV_TEMPERATURE=1.3 uv run --extra serve python -m kev.serve --run jaredpalmer/kev-0.8b --port 8009
-# 2. the sidecar that translates kev's answers into the extension's contract
-uv run --python .venv/bin/python local-judge/server.py --engine kev --model http://127.0.0.1:8009
-# 3. the replay, on the same stratified sample as the other judges
-export PI_JEV_LOCAL_URL=http://127.0.0.1:47411 PI_JEV_TIMEOUT_MS=3000 PI_JEV_BENCH_CONCURRENCY=1
-bun run bench/replay/cli.ts judge --judge local --sample stratified --limit 2000
-bun run bench/replay/cli.ts score --judge local && bun run bench/replay/cli.ts report
-```
-
-`PI_JEV_BENCH_CONCURRENCY=1` matters: `kev.serve` answers one request at a time, so the default
-8-way fan-out measures queueing, not the judge (p50 2,654 ms at 8 vs 341 ms at 1, measured on
-the prompt-level cases of the deferred prefix idea).
-
 ## Request shape
 
 Each case sends the extension's own request: `buildState` (task context in the extension's
@@ -195,7 +178,7 @@ Block splitting, the judge state, tool matching, the question set and the `decid
   (or no answer) keeps the whole result. There is no regex fallback.
 - **`local` loses triage on question wording, not on model quality.** kev answers "yes" to
   almost every block (AUC 0.525, only 2.8% of blocks under P=0.1), so the shipped policy prunes
-  64 of 2,000 cases. `local-judge/RESULTS.md` §4 measured exactly this and
+  64 of 2,000 cases. An earlier local-judge eval measured exactly this and
   named the cause: the bare phrasing "Is this block needed for the current task?" scores 0.30 on
   kev-0.8b, and adding "Answer no if it is from an unrelated file or an unrelated part of the
   code" takes the same model on the same items to 0.75. The rerun above replaces this column.

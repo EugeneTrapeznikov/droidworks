@@ -111,6 +111,5 @@ Measured, then deferred: ship one strong capability first. `src/judge/types.ts` 
 - `bench/live/`: `bun bench/live/run.ts --arms off,triage-local,triage-vercel`, then `bun bench/live/score.ts --in <dir>`.
 - `bench/swe/`: `arms.json` for the moa-harness runner.
 - `bench/session-replay/`: `replay.ts`. The aggregate `results-*.md` is committed; per-result decisions (`*.jsonl`) and the session-label mapping (`private/`) stay local.
-- `local-judge/`: loopback System One sidecar for `--judge local`. Default engine `kev` (`kev.serve` + `jaredpalmer/kev-0.8b`).
 - `scripts/probe-window.ts`: Pi extension that dumps the first-turn system prompt, skills, and per-package tool schema sizes. `PI_JEV_PROBE_OUT=/tmp/probe pi -e scripts/probe-window.ts -p "reply with the single word ok"`.
 - `scripts/mine-sessions.py`, `scripts/mine-sessions-cost.py`: mine `~/.pi/agent/sessions` for turn types, chains, context sizes, cost split, tool-result sizes.

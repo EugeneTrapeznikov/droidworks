@@ -100,7 +100,7 @@ fit ends the run. The rest stay unjudged and visible; no block text is ever trun
 | Backend | Limit (primary source) | `PI_JEV_STATE_CHARS` |
 |---|---|---|
 | `vercel` / `typesafe` (jev-1.13) | 32k tokens for `state` + the longest question; 64k for `state` + all questions ([Models](https://docs.typesafe.ai/models.md)); gateway lists a 32,000 context window ([Vercel](https://vercel.com/ai-gateway/models/jev)); `/v1/evaluate` docs state no separate limit | default `80000` (~23k tokens; leaves ~9k for the longest question and room under 64k for ~50 winnow-sized questions). Accuracy drops as irrelevant state grows ([jaggedness](https://docs.typesafe.ai/model-jaggedness/jev-1.13.md)), so do not fill 32k |
-| `local` → kev | 8,192 tokens per question, state included; over it answers 422 (`local-judge/README.md`) | default `24000` (~6.9k tokens) |
+| `local` → kev | 8,192 tokens per question, state included; over it answers 422 | default `24000` (~6.9k tokens) |
 | `local` → JevK5 v0.2.0 `jevk5-serve` | no truncation or refusal in `jevk5-serve`/`runtime.py`; Qwen3.5-4B `max_position_embeddings` 262,144; CUDA graphs up to 4,096 tokens, longer inputs run eagerly (README: eager ~70 ms vs graphed 13 ms on H100) and every question re-encodes the whole state; the 16,384-token refusal is only in the JevBench adapter ([allebee/jevk5@v0.2.0](https://github.com/allebee/jevk5/tree/v0.2.0)) | `24000` like kev; `12000` (~3.4k tokens + question + chat template) is a speed hint that stays inside the 4,096 graph |
 | `mock` | none | any |
 

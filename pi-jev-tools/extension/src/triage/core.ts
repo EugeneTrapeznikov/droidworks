@@ -209,7 +209,7 @@ export function buildState(task: string, blocks: Block[], stateCap: number, tool
 export const ERROR_GATE = "err";
 
 /** Sharpened block-relevance question. The "unrelated" clause matters: bare "is this needed" scores 0.30
- *  on kev-0.8b (says yes to everything), this phrasing 0.75 on the same items (local-judge/RESULTS.md §4). */
+ *  on kev-0.8b (says yes to everything), this phrasing 0.75 on the same items. */
 export const SHARPENED_BLOCK_QUESTION =
 	"Is this block needed to carry out the current task? Answer no if it is from an unrelated file or an unrelated part of the code, or is boilerplate the task does not touch.";
 
