@@ -12,4 +12,13 @@ bun test bench/session-replay
 - Tokens: each session's recorded input+cacheRead tokens over its transcript chars gives chars/token (fallback 3.3). Saved tokens split into input and cacheRead by each call's recorded proportions and are priced at that call's recorded rates, minus 155 tokens/call of recall overhead.
 - Harm proxy: a hidden block is flagged when one of its identifiers (6+ chars with `_`, `/`, or camelCase) appears in the original session's later assistant text or tool inputs.
 
-Outputs next to the script: `results-<date>.md` (tables), `decisions-<date>.jsonl` (one line per judged or skipped result: outcome, block probabilities, chars before and after), and `flagged-<date>.md` (the 10 highest-overlap hidden blocks as raw session text, for hand review; not committed).
+```bash
+bun run bench/session-replay/replay.ts --date 2026-09-23 --offline [--wall <min>] [--retries <json>]   # reports from logged decisions, no judge calls
+bun run bench/session-replay/replay.ts --date 2026-09-23 --probs out.md             # probability histograms + drop what-if
+```
+
+Outputs next to the script:
+
+- `results-<date>.md`: per-session and aggregate tables, plus a drop-threshold sweep (0.10–0.30) replayed offline from the same probabilities. Sessions appear only as S01…S20 with numbers. `--offline` covers only sessions whose every eligible result has a logged decision, and marks the report interim when that is fewer than all of them.
+- `decisions-<date>.jsonl` (gitignored): one line per result, appended as it is decided. Each line has the outcome, call index, block probabilities and chars, error probability, and latency. A rerun resumes from it.
+- `private/` (gitignored): the label-to-session mapping, and the 10 highest-overlap hidden blocks as raw session text for hand review.

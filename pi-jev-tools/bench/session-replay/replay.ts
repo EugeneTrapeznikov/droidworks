@@ -8,7 +8,7 @@
 // Read-only on ~/.pi/agent/sessions. Writes results-<date>.md, decisions-<date>.jsonl and
 // flagged-<date>.md (raw hidden text, for hand review) next to this file.
 
-import { appendFileSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type { Judge, JudgeRequest, JudgeResponse } from "../../extension/src/judge/types.ts";
@@ -95,10 +95,46 @@ export function pickSessions(top: number, root = ROOT) {
 	return { picked, excluded: all.filter((s) => bad(s) && s.calls >= cutoff) };
 }
 
+/** An entry's text as the model sees it: text parts and tool-call arguments (untrimmed, so a part can be replaced). */
+function entryText(e: any): string {
+	if (e.type === "compaction") return String(e.summary ?? "");
+	const c = e.type === "custom_message" ? e.content : e.type === "message" ? e.message?.content : "";
+	if (typeof c === "string") return c;
+	if (!Array.isArray(c)) return "";
+	return c.map((p: any) => (p?.type === "text" && typeof p.text === "string" ? p.text : p?.type === "toolCall" ? JSON.stringify(p.arguments ?? "") : "")).join("\n");
+}
+
 /** A logged judged decision as a judge response (block probabilities + error gate). */
 function fromCache(d: Decision): JudgeResponse {
 	const answers = Object.fromEntries(Object.entries(d.probs ?? {}).map(([k, v]) => [k, { type: "noul" as const, probability: v }]));
 	return { answers: { ...answers, [ERROR_GATE]: { type: "noul", probability: d.err ?? 1 } }, latencyMs: d.latencyMs ?? 0, backend: "cache", usage: { inputTokens: d.jevTokens ?? 0 } };
+}
+
+/**
+ * Chars per token from growth between consecutive calls with no compaction between them: chars added
+ * to the transcript over tokens the recorded context grew by (the rule in scripts/project-triage-savings.py).
+ * Independent of the system prompt and of pruning outside the transcript. Outside 1.5–8, or under 5,000
+ * tokens of growth, falls back to 3.3.
+ */
+export function charsPerToken(ents: any[]): number {
+	let gapChars = 0, gapTok = 0, gap = 0, last: number | null = null, clean = true;
+	for (const e of ents) {
+		if (e.type === "compaction") clean = false;
+		if (e.type === "custom_message") gap += visibleChars(e.content);
+		if (e.type !== "message") continue;
+		const m = e.message;
+		if (!isCall(m)) {
+			gap += visibleChars(m.content);
+			continue;
+		}
+		const ctx = m.usage.input + (m.usage.cacheRead ?? 0);
+		if (clean && last !== null && ctx > last) (gapChars += gap), (gapTok += ctx - last);
+		last = ctx;
+		gap = visibleChars(m.content);
+		clean = true;
+	}
+	const cpt = gapTok > 5000 ? gapChars / gapTok : 0;
+	return cpt >= 1.5 && cpt <= 8 ? cpt : FALLBACK_CPT;
 }
 
 // --- harm proxy ---
@@ -148,10 +184,21 @@ export interface HiddenBlock {
 	lines: string;
 	text: string;
 	matches: string[];
+	/** First mention lands within the next 3 model calls. */
+	soon: boolean;
+	/** A later `read` of the same path covers these lines. */
+	recalled: boolean;
+	/** A returning identifier was not visible anywhere in the triaged transcript before it returned. */
+	uniqueLoss: boolean;
 }
 
 export interface SessionResult {
+	/** Abstract label (S01…) for anything that goes into git. */
+	label: string;
 	path: string;
+	/** Eligible results with no logged decision (offline replay only). */
+	missing: number;
+	ctxTokens: number;
 	cwd: string;
 	calls: number;
 	compactions: number;
@@ -164,6 +211,8 @@ export interface SessionResult {
 	skipRatio: number;
 	/** Eligible results a compaction removed before the session ended. */
 	evicted: number;
+	/** Eligible results dropped because the recorded context was smaller than the timeline (pruned outside the transcript). */
+	prunedOutside: number;
 	/** Mean model calls each eligible result was in context for. */
 	sendsMean: number;
 	eligibleChars: number;
@@ -189,6 +238,8 @@ export interface ReplayOpts {
 	cached?: Map<string, Decision>;
 	/** Called with each new decision as it happens. */
 	log?: (d: Decision) => void;
+	/** Never call the judge: a result without a judged decision fails open (missing ones are counted). */
+	offline?: boolean;
 }
 
 export async function replaySession(path: string, ask: Ask, tcfg: TriageConfig, opts: ReplayOpts = {}): Promise<SessionResult> {
@@ -197,19 +248,27 @@ export async function replaySession(path: string, ask: Ask, tcfg: TriageConfig, 
 	const pos = new Map<string, number>();
 	ents.forEach((e, i) => e.id && pos.set(e.id, i));
 	const r: SessionResult = {
-		path, cwd: ents.find((e) => e.type === "session")?.cwd ?? "", calls: 0, compactions: 0, eligible: 0, judged: 0,
-		failOpens: 0, structured: 0, pruned: 0, errorGated: 0, skipRatio: 0, evicted: 0, sendsMean: 0, eligibleChars: 0, judgedChars: 0, hiddenChars: 0, stubs: 0, cpt: FALLBACK_CPT,
+		label: "", missing: 0, ctxTokens: 0, path, cwd: ents.find((e) => e.type === "session")?.cwd ?? "", calls: 0, compactions: 0, eligible: 0, judged: 0,
+		failOpens: 0, structured: 0, pruned: 0, errorGated: 0, skipRatio: 0, evicted: 0, prunedOutside: 0, sendsMean: 0, eligibleChars: 0, judgedChars: 0, hiddenChars: 0, stubs: 0, cpt: FALLBACK_CPT,
 		savedPctLast: 0, savedPctMean: 0, savedInput: 0, savedCacheRead: 0, costSaved: 0, costOriginal: 0, flagged: 0,
 		jevTokens: 0, latencies: [], decisions: [], hidden: [],
 	};
 	const session = path.split("/").slice(-2).join("/");
 	// timeline items: entry index, original chars, triaged chars
+	r.cpt = charsPerToken(ents);
+	/** Chars the first call carried beyond the transcript (system prompt, tool schemas). */
+	let sysChars: number | undefined;
 	type Item = { i: number; o: number; t: number; sends: number };
+	// Everything the model could see in the triaged transcript, and where each entry starts in it
+	let vis = "";
+	let cur = "";
+	const visOff: number[] = [];
 	let tl: Item[] = [];
 	const elig: Item[] = [];
 	const add = (i: number, o: number, t = o, eligible = false) => {
 		const x = { i, o, t, sends: 0 };
 		tl.push(x);
+		vis += cur + "\n";
 		if (eligible) elig.push(x);
 	};
 	const calls: { o: number; t: number; u: any }[] = [];
@@ -218,11 +277,14 @@ export async function replaySession(path: string, ask: Ask, tcfg: TriageConfig, 
 	let assistant = "";
 	// later text for the harm proxy: assistant text + tool-call inputs, with the entry index each starts at
 	let later = "";
-	const laterAt: { i: number; off: number }[] = [];
-	const hiddenAt: { i: number; b: Omit<HiddenBlock, "matches"> }[] = [];
+	const laterAt: { i: number; off: number; call: number }[] = [];
+	const reads: { i: number; path: string; from: number; to: number }[] = [];
+	const hiddenAt: { i: number; call: number; path?: string; start: number; end: number; b: Omit<HiddenBlock, "matches" | "soon" | "recalled" | "uniqueLoss"> }[] = [];
 
 	for (let i = 0; i < ents.length; i++) {
 		const e = ents[i];
+		visOff[i] = vis.length;
+		cur = entryText(e);
 		if (e.type === "compaction") {
 			const cut = pos.get(e.firstKeptEntryId) ?? i;
 			r.evicted += tl.filter((x) => x.i < cut && elig.includes(x)).length;
@@ -240,7 +302,21 @@ export async function replaySession(path: string, ask: Ask, tcfg: TriageConfig, 
 		if (m.role === "user") prompts.push(contentText(m.content));
 		if (m.role === "assistant") {
 			if (isCall(m)) {
-				let o = 0, t = 0;
+				// Context pruned outside the transcript (no compaction entry): the recorded call is smaller than the
+				// timeline. Drop the oldest tool results from both timelines until it fits.
+				// ponytail: oldest-first guess at what was pruned; exact only if the pruner's rule is replayed
+				const room = (m.usage.input + (m.usage.cacheRead ?? 0)) * r.cpt;
+				let o = tl.reduce((n, x) => n + x.o, 0);
+				sysChars ??= Math.max(0, room - o);
+				for (let k = 0; k < tl.length && o > room - sysChars; k++) {
+					const x = tl[k]!;
+					if (ents[x.i]?.message?.role !== "toolResult") continue;
+					o -= x.o;
+					if (elig.includes(x)) r.prunedOutside++;
+					tl.splice(k--, 1);
+				}
+				let t = 0;
+				o = 0;
 				for (const x of tl) (o += x.o), (t += x.t), x.sends++;
 				calls.push({ o, t, u: m.usage });
 			}
@@ -249,9 +325,14 @@ export async function replaySession(path: string, ask: Ask, tcfg: TriageConfig, 
 			for (const c of Array.isArray(m.content) ? m.content : []) {
 				if (c?.type !== "toolCall") continue;
 				args.set(c.id, c.arguments);
+				const ca = c.arguments ?? {};
+				if (c.name === "read" && typeof ca.path === "string") {
+					const from = Number(ca.offset) || 1;
+					reads.push({ i, path: ca.path, from, to: Number(ca.limit) ? from + Number(ca.limit) - 1 : Infinity });
+				}
 				tail.push(JSON.stringify(c.arguments ?? ""));
 			}
-			laterAt.push({ i, off: later.length });
+			laterAt.push({ i, off: later.length, call: calls.length });
 			later += tail.join("\n") + "\n";
 		}
 		const o = visibleChars(m.content);
@@ -300,8 +381,11 @@ export async function replaySession(path: string, ask: Ask, tcfg: TriageConfig, 
 		}
 		r.eligible++;
 		r.eligibleChars += text.length;
+		if (opts.offline && !hit) r.missing++;
 		const { res, attempts } = hit?.probs
 			? { res: fromCache(hit), attempts: hit.attempts ?? 0 }
+			: opts.offline
+			? { res: null, attempts: 0 }
 			: await ask({ state, questions: buildQuestions(judged, tcfg.questions), timeoutMs: TIMEOUT_MS });
 		const more = { blocks: blocks.length, judged: judged.length, attempts, blockChars: blocks.map((b) => b.text.length) };
 		if (!res) {
@@ -333,25 +417,33 @@ export async function replaySession(path: string, ask: Ask, tcfg: TriageConfig, 
 		r.hiddenChars += d.hiddenChars;
 		r.stubs += d.hidden.filter((h, k) => h && !d.hidden[k - 1]).length;
 		push({ ...info, outcome: "pruned", charsAfter: pruned.length });
+		cur = cur.replace(text, () => pruned);
 		add(i, o, o - text.length + pruned.length, true);
-		blocks.forEach((b, k) => d.hidden[k] && hiddenAt.push({ i, b: { session, entry: e.id, tool, lines: `${b.start}-${b.end}`, text: b.text } }));
+		blocks.forEach((b, k) => d.hidden[k] && hiddenAt.push({ i, call: base.call, path: tool === "read" ? a?.path : undefined, start: b.start, end: b.end, b: { session, entry: e.id, tool, lines: `${b.start}-${b.end}`, text: b.text } }));
 	}
 
 	r.sendsMean = elig.length ? elig.reduce((n, x) => n + x.sends, 0) / elig.length : 0;
 
 	// harm proxy: an identifier from a hidden block reappears in the original session's later assistant text or tool inputs
-	for (const { i, b } of hiddenAt) {
+	for (const { i, call, path: rp, start, end, b } of hiddenAt) {
 		const from = laterAt.find((x) => x.i > i)?.off ?? later.length;
-		const matches = identifiers(b.text).filter((id) => later.indexOf(id, from) >= 0);
-		if (matches.length) r.flagged++;
-		r.hidden.push({ ...b, matches });
+		const hits = identifiers(b.text).map((id) => [id, later.indexOf(id, from)] as const).filter(([, at]) => at >= 0);
+		const first = Math.min(...hits.map(([, at]) => at));
+		// the assistant message holding the first mention; its call count vs the result's
+		const chunk = laterAt.findLast((x) => x.off <= first);
+		const soon = hits.length > 0 && !!chunk && chunk.call - call <= 3;
+		// unique loss: some returning identifier was nowhere in the triaged transcript before it returned
+		const uniqueLoss = hits.some(([id, at]) => {
+			const j = laterAt.findLast((x) => x.off <= at)!.i;
+			const seen = vis.indexOf(id);
+			return seen < 0 || seen >= visOff[j]!;
+		});
+		const recalled = !!rp && reads.some((x) => x.i > i && x.path === rp && x.from <= end && x.to >= start);
+		if (hits.length) r.flagged++;
+		r.hidden.push({ ...b, matches: hits.map(([id]) => id), soon, recalled, uniqueLoss });
 	}
 
 	// tokens: this session's own tokens per context char; price at each call's own recorded rates
-	const tok = calls.reduce((n, c) => n + (c.u.input ?? 0) + (c.u.cacheRead ?? 0), 0);
-	const chars = calls.reduce((n, c) => n + c.o, 0);
-	const cpt = tok && chars ? chars / tok : 0;
-	r.cpt = cpt >= 1.5 && cpt <= 8 ? cpt : FALLBACK_CPT;
 	const pct: number[] = [];
 	for (const c of calls) {
 		const inp = c.u.input ?? 0, cr = c.u.cacheRead ?? 0, cost = c.u.cost ?? {};
@@ -365,6 +457,7 @@ export async function replaySession(path: string, ask: Ask, tcfg: TriageConfig, 
 		r.savedCacheRead += sCr;
 		r.costSaved += sIn * ri + sCr * rr;
 		r.costOriginal += (cost.input ?? 0) + (cost.cacheRead ?? 0);
+		r.ctxTokens += inp + cr;
 		pct.push((sIn + sCr) / (inp + cr));
 	}
 	r.calls = calls.length;
@@ -384,11 +477,20 @@ const p = (x: number) => `${(x * 100).toFixed(1)}%`;
 const k = (x: number) => (Math.abs(x) >= 1e6 ? `${(x / 1e6).toFixed(2)}M` : `${(x / 1e3).toFixed(0)}k`);
 const usd = (x: number) => `$${x.toFixed(2)}`;
 const name = (r: SessionResult) => `${r.cwd.replace(homedir(), "~")} ${r.path.split("_").at(-1)!.slice(-12, -6)}`;
+const label = (r: SessionResult) => r.label;
 
-export function report(rs: SessionResult[], meta: { date: string; excluded: string[]; wallS: number; retries: Record<string, number>; interim?: boolean }) {
+export function report(rs: SessionResult[], meta: { date: string; excluded: number; wallS: number; retries: Record<string, number>; interim?: boolean; sweep?: string }) {
+	// forked sessions carry their parent's history: the same entry ids in two files
+	const ids = rs.map((r) => new Set(r.decisions.map((d) => d.entry)));
+	const shared: string[] = [];
+	for (let a = 0; a < rs.length; a++)
+		for (let b = a + 1; b < rs.length; b++) {
+			const n = [...ids[a]!].filter((x) => ids[b]!.has(x)).length;
+			if (n) shared.push(`${rs[a]!.label}/${rs[b]!.label} ${n}`);
+		}
 	const rows = rs.map((r) => [
-		name(r), r.calls, r.eligible, r.judged, r.failOpens, p(r.eligibleChars ? r.hiddenChars / r.eligibleChars : 0),
-		p(r.savedPctLast), p(r.savedPctMean), k(r.savedInput), k(r.savedCacheRead), usd(r.costSaved), r.stubs, r.flagged, r.cpt.toFixed(2),
+		label(r), r.calls, r.eligible, r.judged, r.failOpens, p(r.eligibleChars ? r.hiddenChars / r.eligibleChars : 0),
+		p(r.savedPctLast), p(r.savedPctMean), k(r.savedInput), k(r.savedCacheRead), r.costOriginal ? usd(r.costSaved) : "n/a", r.stubs, r.flagged, r.cpt.toFixed(2),
 	]);
 	const table = (head: string[], body: unknown[][]) =>
 		[`| ${head.join(" | ")} |`, `|${head.map(() => "---").join("|")}|`, ...body.map((b) => `| ${b.join(" | ")} |`)].join("\n");
@@ -402,11 +504,11 @@ export function report(rs: SessionResult[], meta: { date: string; excluded: stri
 	const judged = sum((r) => r.judged);
 	const jevUsd = (sum((r) => r.jevTokens) * JEV_USD_PER_MTOK) / 1e6;
 	const bySaved = [...rs].sort((a, b) => b.savedPctMean - a.savedPctMean);
-	const line = (r: SessionResult) => `- ${name(r)}: ${p(r.savedPctMean)} mean, ${p(r.savedPctLast)} at last call, ${usd(r.costSaved)} saved`;
+	const line = (r: SessionResult) => `- ${label(r)}: ${p(r.savedPctMean)} mean, ${p(r.savedPctLast)} at last call, ${r.costOriginal ? usd(r.costSaved) : "no cost recorded"}`;
 	const flaggedAll = rs.flatMap((r) => r.hidden);
 	const why = (r: SessionResult) => {
 		const n = Math.max(1, r.eligible);
-		return `| ${name(r)} | ${p(r.savedPctMean)} | ${r.eligible} | ${p(r.errorGated / n)} | ${p(r.skipRatio / n)} | ${p(r.failOpens / n)} | ${p(r.pruned / n)} | ${p(r.evicted / n)} | ${r.sendsMean.toFixed(0)} | ${p(r.judgedChars ? r.hiddenChars / r.judgedChars : 0)} |`;
+		return `| ${label(r)} | ${p(r.savedPctMean)} | ${r.eligible} | ${p(r.errorGated / n)} | ${p(r.skipRatio / n)} | ${p(r.failOpens / n)} | ${p(r.pruned / n)} | ${p(r.evicted / n)} | ${p(r.prunedOutside / n)} | ${r.sendsMean.toFixed(0)} | ${p(r.judgedChars ? r.hiddenChars / r.judgedChars : 0)} |`;
 	};
 	return `# Session replay, ${meta.date}${meta.interim ? ` (INTERIM, n=${rs.length} of 20 sessions)` : ""}
 
@@ -431,7 +533,7 @@ ${table(["metric", "p50", "p90", "mean"], [
 - Tokens saved: ${k(sum((r) => r.savedInput))} input, ${k(sum((r) => r.savedCacheRead))} cacheRead. Cost saved ${usd(sum((r) => r.costSaved))} of ${usd(sum((r) => r.costOriginal))} input+cacheRead cost (${p(sum((r) => r.costSaved) / sum((r) => r.costOriginal))}).
 - Judge latency p50 ${quantile(lat, 0.5).toFixed(0)} ms, p95 ${quantile(lat, 0.95).toFixed(0)} ms. Retries by cause: ${JSON.stringify(meta.retries)}.
 - Jev cost: ${usd(jevUsd)} (${k(sum((r) => r.jevTokens))} input tokens at $${JEV_USD_PER_MTOK}/M). Wall time ${(meta.wallS / 60).toFixed(1)} min.
-- Harm proxy: ${sum((r) => r.flagged)} of ${flaggedAll.length} hidden blocks have an identifier reappearing in later assistant text or tool inputs.
+- Harm proxy: ${sum((r) => r.flagged)} of ${flaggedAll.length} hidden blocks flagged (an identifier reappears in later assistant text or tool inputs); ${flaggedAll.filter((h) => h.uniqueLoss).length} unique losses (a returning identifier was visible nowhere else). Definitions under the sweep.
 
 Biggest savers (mean/call):
 ${bySaved.slice(0, 3).map(line).join("\n")}
@@ -439,30 +541,56 @@ ${bySaved.slice(0, 3).map(line).join("\n")}
 Smallest savers:
 ${bySaved.slice(-3).reverse().map(line).join("\n")}
 
-Where eligible results went (share of eligible results; evicted = removed by an original compaction before session end; sends = mean calls an eligible result stayed in context):
+Where eligible results went (share of eligible results; compacted = removed by an original compaction before session end; pruned outside transcript = dropped because the recorded context was smaller than the transcript; sends = mean calls an eligible result stayed in context):
 
-| session | saved mean/call | eligible | error-gated | < 20% ratio | fail-open | pruned | evicted | sends | hide rate (judged) |
-|---|---|---|---|---|---|---|---|---|---|
+| session | saved mean/call | eligible | error-gated | < 20% ratio | fail-open | pruned | compacted | pruned outside transcript | sends | hide rate (judged) |
+|---|---|---|---|---|---|---|---|---|---|---|
 ${bySaved.map(why).join("\n")}
 
-Excluded as benchmark runs (would have ranked in the top ${rs.length}): ${meta.excluded.length ? meta.excluded.join(", ") : "none"}.
+Sessions are labelled S01…S20 by model-call rank; the label-to-session mapping and the flagged blocks live in the gitignored \`private/\`. Benchmark-run sessions excluded from the ranking: ${meta.excluded}.
+${meta.sweep ?? ""}
 
 ## Caveats
 
 - No model re-run: every later turn is the original one. A hidden block the model needed would have cost a \`pi_jev_recall\` call (or a different trajectory) that this replay cannot see; the harm proxy is the only signal for that.
 - Compaction: the original sessions compacted; both timelines drop entries before \`firstKeptEntryId\` and add the summary. Triage would have shifted when compaction fires; this replay keeps the original compaction points.
 - Branches are replayed in write order, not resolved through \`parentId\`.
-- Tokens per char is each session's recorded input+cacheRead over its transcript chars. The system prompt is not in the transcript chars, so the ratio slightly overstates tokens per transcript char, and savings with it.
+- Chars per token comes from growth between consecutive uncompacted calls (chars added / recorded tokens added), not from total tokens over total transcript chars as first specified. The total ratio mixed in the system prompt, and the context some sessions pruned without a compaction entry (recorded context shrinks between calls), which inflated savings (one session showed 12.5% mean on a 6% hide rate). When a call's recorded context is smaller than the timeline, the oldest tool results are dropped from both timelines until it fits.
+- Cost: sessions whose usage records no cost show n/a and add $0 to the cost totals; token savings are still counted.
 - Stub overhead: 155 tokens/call (system-prompt section + recall schema) is subtracted on every call, from cacheRead when the call had any; stub text itself is in the triaged timeline.
 - Fail-open results (judge error after 5 attempts, 15 s each) count as untouched.
+- Forked sessions: some files replay their parent's history, so the same tool results are counted in both. Shared triaged results by pair: ${shared.join(", ") || "none"}.
+- Wall time covers the completed run only; an earlier attempt ran 84 min before it was restarted to add the incremental decision log.
 `;
 }
 
 export function flaggedReport(rs: SessionResult[], n = 10): string {
 	const top = rs.flatMap((r) => r.hidden).filter((h) => h.matches.length).sort((a, b) => b.matches.length - a.matches.length).slice(0, n);
 	return `# Flagged hidden blocks (top ${top.length} by identifier overlap)\n\nRaw session text; not for commit.\n\n${top
-		.map((h) => `## ${h.session} ${h.entry} ${h.tool} lines ${h.lines}\n\nLater mentions (${h.matches.length}): ${h.matches.slice(0, 20).map((m) => `\`${m}\``).join(", ")}\n\n\`\`\`\n${h.text}\n\`\`\``)
+		.map((h) => `## ${rs.find((r) => h.session === r.path.split("/").slice(-2).join("/"))?.label} ${h.session} ${h.entry} ${h.tool} lines ${h.lines}\n\nWithin 3 calls: ${h.soon}; recalled by later read: ${h.recalled}. Later mentions (${h.matches.length}): ${h.matches.slice(0, 20).map((m) => `\`${m}\``).join(", ")}\n\n\`\`\`\n${h.text}\n\`\`\``)
 		.join("\n\n")}\n`;
+}
+
+/** Drop-threshold sweep over offline replays (one SessionResult list per threshold). */
+export function sweepReport(byT: [number, SessionResult[]][]): string {
+	const rows = byT.map(([t, rs]) => {
+		const sum = (f: (r: SessionResult) => number) => rs.reduce((a, r) => a + f(r), 0);
+		const hidden = rs.flatMap((r) => r.hidden);
+		const flagged = hidden.filter((h) => h.matches.length);
+		const unique = hidden.filter((h) => h.uniqueLoss);
+		return `| ${t.toFixed(2)} | ${p(sum((r) => r.hiddenChars) / Math.max(1, sum((r) => r.judgedChars)))} | ${p(sum((r) => r.savedInput + r.savedCacheRead) / Math.max(1, sum((r) => r.ctxTokens)))} | ${p(quantile(rs.map((r) => r.savedPctMean), 0.5))} | ${hidden.length} | ${flagged.length} (${p(flagged.length / Math.max(1, hidden.length))}) | ${p(flagged.filter((h) => h.soon).length / Math.max(1, flagged.length))} / ${p(flagged.filter((h) => !h.soon).length / Math.max(1, flagged.length))} | ${hidden.filter((h) => h.recalled).length} | ${unique.length} (${p(unique.length / Math.max(1, hidden.length))}) | ${unique.filter((h) => h.recalled).length} | ${p((flagged.length - unique.length) / Math.max(1, flagged.length))} |`;
+	});
+	return `
+## Drop-threshold sweep (offline, same judged probabilities)
+
+First/last block kept, error gate >= 0.5, >= 20% prune ratio. Context saved is net of the 155-token overhead, over all calls' input+cacheRead tokens (aggregate) and the per-session mean/call (p50). Flagged: a hidden block's identifier appears in the original session's later assistant text or tool inputs, split by whether the first mention is within the next 3 model calls. Recalled: a later \`read\` of the same path covers the hidden lines.
+
+Two harm proxies. **Flagged** (loose): at least one identifier from the hidden block appears in the original session's later assistant text or tool inputs. **Unique loss** (strict): at least one of those returning identifiers appears nowhere in the text the model could see at the moment it returns, i.e. not in the result's kept blocks, and not in any earlier tool result, assistant message, user message, custom message or compaction summary in the triaged timeline. Hidden text and stubs are not visible. Identifiers everywhere: 6+ chars after trailing punctuation is stripped, containing a letter plus \`_\`, \`/\`, or camelCase. "Flagged explained by visible text" is the share of flagged blocks that are not unique losses.
+
+| drop <= | judged chars hidden | context saved (aggregate) | context saved (session p50) | hidden blocks | flagged | flagged within 3 calls / later | recalled by later read | unique loss | unique loss re-read later | flagged explained by visible text |
+|---|---|---|---|---|---|---|---|---|---|---|
+${rows.join("\n")}
+`;
 }
 
 /** Jev probability distribution and drop-threshold what-if over logged judged decisions. */
@@ -552,29 +680,64 @@ if (import.meta.main) {
 		return { res: ok, attempts };
 	};
 	let done = 0, failed = 0;
+	const offline = argv.includes("--offline");
 	const { picked, excluded } = pickSessions(top);
-	console.error(`sessions ${picked.length}; excluded ${excluded.length}; judge ${inner.name}; stateCap ${tcfg.stateCap}; cached ${cached.size}; log ${decisionsPath}`);
-	const meta = (interim?: boolean) => ({ date, excluded: excluded.map((s) => `${s.cwd} (${s.calls} calls)`), wallS: (Date.now() - t0) / 1000, retries: retryCounts, interim });
-	let finished = 0;
-	const results: SessionResult[] = new Array(picked.length);
-	let next = 0;
-	await Promise.all(
-		Array.from({ length: 4 }, async () => {
-			while (next < picked.length) {
-				const j = next++;
-				results[j] = await replaySession(picked[j]!.path, ask, tcfg, { cached, log });
-				const r = results[j]!;
-				console.error(`  [${j + 1}/${picked.length}] ${name(r)} calls ${r.calls} judged ${r.judged}/${r.eligible} failopen ${r.failOpens} saved ${p(r.savedPctMean)}`);
-				if (++finished === 10 && picked.length > 10) {
-					writeFileSync(join(dir, `results-${date}.md`), report(results.filter(Boolean), meta(true)));
-					console.error(`  INTERIM written: results-${date}.md (n=10)`);
+	console.error(`sessions ${picked.length}; excluded ${excluded.length}; judge ${offline ? "offline" : inner.name}; stateCap ${tcfg.stateCap}; cached ${cached.size}; log ${decisionsPath}`);
+	const privDir = join(dir, "private");
+	const wallMin = argv.includes("--wall") ? Number(opt("--wall", "0")) : undefined;
+
+	/** Replay the picked sessions 4 at a time; `onDone` sees each finished session. */
+	const runAll = async (cfg: TriageConfig, o: ReplayOpts, onDone?: (r: SessionResult, j: number) => void) => {
+		const out: SessionResult[] = new Array(picked.length);
+		let next = 0;
+		await Promise.all(
+			Array.from({ length: 4 }, async () => {
+				while (next < picked.length) {
+					const j = next++;
+					const r = await replaySession(picked[j]!.path, ask, cfg, o);
+					r.label = `S${String(j + 1).padStart(2, "0")}`;
+					out[j] = r;
+					onDone?.(r, j);
 				}
-			}
-		}),
-	);
+			}),
+		);
+		return out;
+	};
+
+	/** results md (labels + numbers only), plus the private mapping and flagged blocks. The sweep replays
+	 *  `done` offline from the decisions on disk at each drop threshold. */
+	const outputs = async (done: SessionResult[], interim: boolean) => {
+		const cache = new Map(readDecisions(decisionsPath).map((d) => [`${d.session}|${d.entry}`, d]));
+		const byT: [number, SessionResult[]][] = [];
+		for (const t of [0.1, 0.15, 0.2, 0.25, 0.3]) {
+			const rs: SessionResult[] = [];
+			for (const r of done) rs.push(await replaySession(r.path, ask, { ...tcfg, drop: t }, { cached: cache, offline: true }));
+			byT.push([t, rs]);
+		}
+		const wallS = wallMin !== undefined ? wallMin * 60 : (Date.now() - t0) / 1000;
+		const md = report(done, { date, excluded: excluded.length, wallS, retries: argv.includes("--retries") ? JSON.parse(opt("--retries", "{}")) : retryCounts, interim, sweep: sweepReport(byT) });
+		writeFileSync(join(dir, `results-${date}.md`), md);
+		mkdirSync(privDir, { recursive: true });
+		writeFileSync(
+			join(privDir, `sessions-${date}.md`),
+			`# Session labels\n\n${done.map((r) => `- ${r.label}: ${r.cwd} ${r.path}`).join("\n")}\n\nExcluded:\n${excluded.map((s) => `- ${s.cwd} ${s.path} (${s.calls} calls)`).join("\n") || "- none"}\n`,
+		);
+		writeFileSync(join(privDir, `flagged-${date}.md`), flaggedReport(done));
+		return md;
+	};
+
+	if (offline) {
+		const all = await runAll(tcfg, { cached, offline: true });
+		const done = all.filter((r) => !r.missing);
+		console.log(await outputs(done, done.length < picked.length));
+		process.exit(0);
+	}
+
+	let finished = 0;
+	const results = await runAll(tcfg, { cached, log }, (r, j) => {
+		console.error(`  [${j + 1}/${picked.length}] ${name(r)} calls ${r.calls} judged ${r.judged}/${r.eligible} failopen ${r.failOpens} saved ${p(r.savedPctMean)}`);
+		if (++finished === 10 && picked.length > 10) console.error("  10 sessions done; run with --offline for the interim report");
+	});
 	writeFileSync(decisionsPath, results.flatMap((r) => r.decisions).map((d) => JSON.stringify(d)).join("\n") + "\n");
-	writeFileSync(join(dir, `flagged-${date}.md`), flaggedReport(results));
-	const md = report(results, meta());
-	writeFileSync(join(dir, `results-${date}.md`), md);
-	console.log(md);
+	console.log(await outputs(results, false));
 }

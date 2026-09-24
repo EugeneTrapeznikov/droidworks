@@ -15,7 +15,7 @@ test("replay prunes an eligible result, measures both timelines, and flags a lat
 		{ type: "message", id: "a1", message: { role: "assistant", content: [{ type: "toolCall", id: "c1", name: "read", arguments: { path: "x" } }], usage: usage(900, 0) } },
 		{ type: "message", id: "r1", message: { role: "toolResult", toolCallId: "c1", toolName: "read", content: [{ type: "text", text: lines.join("\n") }] } },
 		{ type: "message", id: "r2", message: { role: "toolResult", toolCallId: "c2", toolName: "bash", content: [{ type: "text", text: JSON.stringify({ a: "x".repeat(3000) }) }] } },
-		{ type: "message", id: "a2", message: { role: "assistant", content: [{ type: "text", text: "change sessionRefreshTtl" }], usage: usage(100, 2000) } },
+		{ type: "message", id: "a2", message: { role: "assistant", content: [{ type: "text", text: "change sessionRefreshTtl" }], usage: usage(100, 3100) } },
 	];
 	const dir = mkdtempSync(join(tmpdir(), "session-replay-"));
 	const path = join(dir, "s.jsonl");
@@ -36,7 +36,11 @@ test("replay prunes an eligible result, measures both timelines, and flags a lat
 	expect(r.savedPctLast).toBeGreaterThan(0); // second call saw the stub instead of the middle blocks
 	expect(r.savedPctMean).toBeLessThan(r.savedPctLast); // first call only pays the 155-token overhead
 	expect(r.flagged).toBe(1);
-	expect(r.hidden.find((h) => h.matches.length)!.matches).toEqual(["sessionRefreshTtl"]);
+	const flagged = r.hidden.find((h) => h.matches.length)!;
+	expect(flagged.matches).toEqual(["sessionRefreshTtl"]);
+	expect(flagged.soon).toBe(true); // mentioned in the very next call
+	expect(r.hidden.some((h) => h.recalled)).toBe(false); // no later read of the same path
+	expect(flagged.uniqueLoss).toBe(true); // sessionRefreshTtl was visible nowhere else
 });
 
 test("identifiers strip trailing punctuation and need _, / or camelCase", () => {
