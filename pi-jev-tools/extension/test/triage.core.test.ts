@@ -105,7 +105,7 @@ describe("thresholds", () => {
 	const blocks = splitBlocks(lines(125), 25); // 5 blocks
 
 	test("drops at or below PI_JEV_DROP, keeps above", () => {
-		const d = decide(blocks, { b0: 0.9, b1: 0.05, b2: 0.15, b3: 0.16, b4: 0.9 }, 0, tcfg());
+		const d = decide(blocks, { b0: 0.9, b1: 0.05, b2: 0.2, b3: 0.21, b4: 0.9 }, 0, tcfg());
 		expect(d.hidden).toEqual([false, true, true, false, false]);
 		expect(d.dropped).toBe(2);
 		expect(d.kept).toBe(3);

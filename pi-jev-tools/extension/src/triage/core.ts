@@ -52,7 +52,7 @@ export function loadTriageConfig(env: NodeJS.ProcessEnv = process.env, s: JevSet
 		minChars: pickNum(env.PI_JEV_TRIAGE_MIN_CHARS, t.minChars, 2000),
 		blockLines: pickNum(env.PI_JEV_BLOCK_LINES, t.blockLines, 25),
 		blockChars: pickNum(env.PI_JEV_BLOCK_CHARS, t.blockChars, DEFAULT_BLOCK_CHARS),
-		drop: pickNum(env.PI_JEV_DROP, j.drop ?? t.drop, 0.15),
+		drop: pickNum(env.PI_JEV_DROP, j.drop ?? t.drop, 0.2),
 		keep: pickNum(env.PI_JEV_KEEP, j.keep ?? t.keep, 0.5),
 		minPruneRatio: pickNum(env.PI_JEV_MIN_PRUNE_RATIO, t.minPruneRatio, 0.2),
 		stateCap: pickNum(

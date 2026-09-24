@@ -96,5 +96,5 @@ per-instance metrics.
   5 sat in results kept whole by the 20% prune ratio, and 1 was kept by the error gate. SWE-bench tool results are
   short, so pinning covers a large share of their blocks.
 - **Recalls rise** from 6 to 8, and tokens and cost stay within noise.
-- Conclusion: on this set 0.20 buys almost nothing over 0.15. The default stays 0.15; the session-replay context
-  numbers for 0.20 hold only for long sessions with large reads.
+- Conclusion: on this short-task set 0.20 hides little more than 0.15 and costs nothing in resolve rate. The
+  default is 0.20, chosen for long sessions with large reads, where session replay frees 9.7% of context vs 6.5%.

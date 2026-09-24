@@ -2,11 +2,11 @@
 
 Tool-result triage for Pi, driven by a decision model. One capability: a large tool result is split into blocks, a Jev-style judge answers "is this block needed?" per block, and dead runs are hidden behind a stub the model can restore with `pi_jev_recall`. It is a port of [winnow](https://github.com/GhalebDweikat/winnow) onto Pi's `tool_result` event.
 
-## Status (2026-09-23)
+## Status (2026-09-24)
 
-On 20 long real sessions, hosted Jev triage freed 3.1% of context per call (p50) at drop 0.10 and 6.5% (aggregate; session p50 5.9%) at drop 0.15, now the default, with the same 10/20 resolve rate on SWE-bench Lite 20 and a median of zero recall calls per task.
+On 20 long real sessions, hosted Jev triage freed 9.7% of context (aggregate; session p50 8.7%) at drop 0.20, the default, with the same 10/20 resolve rate on SWE-bench Lite 20 at drops 0.10, 0.15, and 0.20 and a median of zero recall calls per task.
 
-It is a modest, measured win on context headroom, not on cost. The extension ships triage only ([extension/README.md](extension/README.md)) with hosted Jev (`vercel`) and drop 0.15. Evidence, cheapest first:
+It is a modest, measured win on context headroom, not on cost. The extension ships triage only ([extension/README.md](extension/README.md)) with hosted Jev (`vercel`) and drop 0.20. Evidence, cheapest first:
 
 **(a) Corpus** ([figures/corpus](bench/figures/corpus-2026-09-23.md)). Tool results are 95% of transcript chars, and 81.5% of tool-result chars pass the triage gates. So triage acts on almost all of the context.
 
@@ -17,8 +17,8 @@ It is a modest, measured win on context headroom, not on cost. The extension shi
 | drop ≤ | judged chars hidden | context saved, aggregate / session p50 | flagged (loose) | unique loss (strict) |
 |---|--:|--:|--:|--:|
 | 0.10 | 10.2% | 3.3% / 3.1% | 38.6% | 4.3% |
-| 0.15 (default) | 21.0% | 6.5% / 5.9% | 46.1% | 4.6% |
-| 0.20 | 31.9% | 9.7% / 8.7% | 53.0% | 5.9% |
+| 0.15 | 21.0% | 6.5% / 5.9% | 46.1% | 4.6% |
+| 0.20 (default) | 31.9% | 9.7% / 8.7% | 53.0% | 5.9% |
 | 0.25 | 40.8% | 12.3% / 10.4% | 56.3% | 6.9% |
 | 0.30 | 47.8% | 14.5% / 12.9% | 57.9% | 8.2% |
 
@@ -26,9 +26,9 @@ SWE-bench Lite 20 at each threshold on the final code ([RESULTS.md](bench/swe/RE
 
 | drop ≤ | resolved | tool-result chars hidden p50 | stubs | recalls | cost total (retail-equiv.) |
 |---|--:|--:|--:|--:|--:|
-| 0.10 / 0.15 | 10/20 / 10/20 | 8% / 19% | 22 / 49 | 4 / 6 | $3.23 / $2.78 |
+| 0.10 / 0.15 / 0.20 | 10/20 / 10/20 / 10/20 | 8% / 19% / — | 22 / 49 / 49 | 4 / 6 / 8 | $3.23 / $2.78 / $2.57 |
 
-At 0.15 triage hid more than twice the chars at the same resolve rate, and no task that recalled a hidden block failed where a control passed.
+At 0.15 triage hid more than twice the chars of 0.10 at the same resolve rate. At 0.20 it hid 17% more bytes than 0.15, again resolving the same 10 tasks ([RESULTS.md](bench/swe/RESULTS.md#2026-09-24-threshold-arm-drop-020)). No task that recalled a hidden block failed where a control passed.
 
 *Flagged*: some identifier from a hidden block shows up in the session's later assistant text or tool inputs. *Unique loss*: a returning identifier that the model could not have seen anywhere else at that moment (not in kept blocks, earlier messages, or compaction summaries). At 0.10, 75% of judged results were kept whole because under 20% of their chars would have been hidden. The prune ratio is not the lever here. Hosted Jev puts its block probabilities around a 0.20 median, and only 11% of blocks score ≤ 0.10, so few results have much to hide at that threshold. The drop threshold is what moves the hide rate: 0.15 doubles it while unique loss moves from 4.3% to 4.6%.
 
@@ -72,7 +72,7 @@ One `tool_result` hook (`extension/src/triage/`). It rewrites each result at ing
 1. Skip unless the tool is allowlisted (`read,bash,grep,find,ls,fetch_url,mcp*`) and the result is ≥ 2,000 chars. Unified diffs and JSON/JSONL bodies pass through unjudged (`skipStructured`), because a hole would break `git apply` or `jq`.
 2. Split into blocks of ≤ 25 lines and ≤ 1,500 chars. A longer single line is hard-split into ≤ 1,500-char pieces, and stubs and recall still address the whole line.
 3. Judge: one `noul` per block plus an error question answered by the model (P ≥ 0.5 keeps the whole result; no regex). Wording comes from `PI_JEV_QUESTION_SET` (default `winnow`). State is `{ task, tool, blocks }` in full text under a per-backend cap (`PI_JEV_STATE_CHARS`, 80k hosted, 24k local). Only the leading run of blocks that fits is judged; the rest stay visible. `maxBlocksPerCall` splits the blocks into sequential chunked calls under one deadline.
-4. `decide()`: the first and last block are always kept. Hide at P ≤ drop (0.15), keep at P ≥ keep (0.5), and leave the uncertain middle visible. Skip the rewrite if under 20% of chars would be hidden or the error gate fires. `drop` and `keep` can be set per judge in `settings.json` (`"pi-jev".judges.<name>`).
+4. `decide()`: the first and last block are always kept. Hide at P ≤ drop (0.20), keep at P ≥ keep (0.5), and leave the uncertain middle visible. Skip the rewrite if under 20% of chars would be hidden or the error gate fires. `drop` and `keep` can be set per judge in `settings.json` (`"pi-jev".judges.<name>`).
 5. Each hidden run becomes a `[pi-jev: hid lines …]` stub. Originals are cached for `pi_jev_recall`.
 
 Fail-open: a judge timeout (15 s) or error leaves the result untouched. `PI_JEV_SHADOW=1` (the default) decides and logs without mutating. Every decision is a `DecisionRecord` in `PI_JEV_LOG`.
