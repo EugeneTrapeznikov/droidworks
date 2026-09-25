@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  pi-jev-triage:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: pi-jev-triage/extension
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun test
+
+  tokenjuice-rtk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tokenjuice-rtk
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: npm test
+
+  pi:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pi/tests/test-installed-patch.sh
+
+  pi-footer-nerdfonts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: node pi-footer-nerdfonts/index.ts

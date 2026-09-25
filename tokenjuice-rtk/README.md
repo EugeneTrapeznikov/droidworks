@@ -1,5 +1,8 @@
 # TokenJuice + RTK
 
+[![CI](https://github.com/EugeneTrapeznikov/droidworks/actions/workflows/ci.yml/badge.svg)](https://github.com/EugeneTrapeznikov/droidworks/actions/workflows/ci.yml)
+[![release](https://img.shields.io/github/v/tag/EugeneTrapeznikov/droidworks?filter=tokenjuice-rtk%40*&label=release)](https://github.com/EugeneTrapeznikov/droidworks/releases?q=tokenjuice-rtk&expanded=true)
+
 Layered Bash-output compaction for Pi without double filtering:
 
 ```text

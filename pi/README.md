@@ -1,5 +1,9 @@
 # Pi
 
+[![CI](https://github.com/EugeneTrapeznikov/droidworks/actions/workflows/ci.yml/badge.svg)](https://github.com/EugeneTrapeznikov/droidworks/actions/workflows/ci.yml)
+[![release](https://img.shields.io/github/v/tag/EugeneTrapeznikov/droidworks?filter=pi%40*&label=release)](https://github.com/EugeneTrapeznikov/droidworks/releases?q=pi%40&expanded=true)
+[![Pi ≥ 0.87.1](https://img.shields.io/badge/Pi-%E2%89%A5%200.87.1-8A2BE2)](https://github.com/earendil-works/pi)
+
 Guarded patches for the installed [`@earendil-works/pi-coding-agent`](https://github.com/earendil-works/pi) npm package. Upstream source is not vendored.
 
 Requires Pi 0.87.1 or newer. Releases are tagged `pi@<tested Pi version>-dw.<n>`.

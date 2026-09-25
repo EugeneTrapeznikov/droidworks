@@ -1,5 +1,9 @@
 # Pi JEV Triage
 
+[![CI](https://github.com/EugeneTrapeznikov/droidworks/actions/workflows/ci.yml/badge.svg)](https://github.com/EugeneTrapeznikov/droidworks/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/pi-jev-triage)](https://www.npmjs.com/package/pi-jev-triage)
+[![downloads](https://img.shields.io/npm/dm/pi-jev-triage)](https://www.npmjs.com/package/pi-jev-triage)
+
 A Pi extension that uses [Jev](https://typesafe.ai/blog/introducing-system-one-models-and-jev), TypeSafe's decision model, to trim large tool results. It splits each big result into blocks, asks Jev which blocks the agent will need, and hides the rest behind a short stub the agent can restore with `pi_jev_recall`.
 
 Tool output is 79% of the characters in my Pi sessions. On my 20 longest sessions this freed 9.7% of the context, and on SWE-bench Lite it solved the same tasks at every threshold.

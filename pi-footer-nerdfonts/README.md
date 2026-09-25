@@ -1,5 +1,8 @@
 # Pi Footer Nerd Fonts
 
+[![CI](https://github.com/EugeneTrapeznikov/droidworks/actions/workflows/ci.yml/badge.svg)](https://github.com/EugeneTrapeznikov/droidworks/actions/workflows/ci.yml)
+[![release](https://img.shields.io/github/v/tag/EugeneTrapeznikov/droidworks?filter=pi-footer-nerdfonts%40*&label=release)](https://github.com/EugeneTrapeznikov/droidworks/releases?q=pi-footer-nerdfonts&expanded=true)
+
 A small Pi extension that saves your eyes from emojis in the footer by replacing them with consistent Nerd Font glyphs.
 
 ```text
