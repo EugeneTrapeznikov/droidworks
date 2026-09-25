@@ -17,20 +17,24 @@ Focused on making coding agents better at real software work: sharper tools, les
 
 ## Projects
 
-### [Pi](pi/)
+- ### [Pi](pi/)
 
 [![release](https://img.shields.io/github/v/tag/EugeneTrapeznikov/droidworks?filter=pi%40*&label=release)](https://github.com/EugeneTrapeznikov/droidworks/releases?q=pi%40&expanded=true)
 ![Pi ≥ 0.87.1](https://img.shields.io/badge/Pi-%E2%89%A5%200.87.1-8A2BE2)
 
 Local Pi customization with theme-aware fullscreen selection and version-guarded patching.
 
-### [Pi Footer Nerd Fonts](pi-footer-nerdfonts/)
+<br>
+
+- ### [Pi Footer Nerd Fonts](pi-footer-nerdfonts/)
 
 [![release](https://img.shields.io/github/v/tag/EugeneTrapeznikov/droidworks?filter=pi-footer-nerdfonts%40*&label=release)](https://github.com/EugeneTrapeznikov/droidworks/releases?q=pi-footer-nerdfonts&expanded=true)
 
 Replaces Pi footer emojis with consistent Nerd Font glyphs.
 
-### [Pi JEV Triage](pi-jev-triage/)
+<br>
+
+- ### [Pi JEV Triage](pi-jev-triage/)
 
 [![npm](https://img.shields.io/npm/v/pi-jev-triage)](https://www.npmjs.com/package/pi-jev-triage)
 [![downloads](https://img.shields.io/npm/dm/pi-jev-triage)](https://www.npmjs.com/package/pi-jev-triage)
@@ -41,12 +45,16 @@ Tool-result triage for Pi: a Jev decision model hides the parts of big tool resu
 pi install npm:pi-jev-triage
 ```
 
-### [TokenJuice + RTK](tokenjuice-rtk/)
+<br>
+
+- ### [TokenJuice + RTK](tokenjuice-rtk/)
 
 [![release](https://img.shields.io/github/v/tag/EugeneTrapeznikov/droidworks?filter=tokenjuice-rtk%40*&label=release)](https://github.com/EugeneTrapeznikov/droidworks/releases?q=tokenjuice-rtk&expanded=true)
 
 Agent-harness integration that coordinates two token-saving tools, providing layered output optimization without double processing.
 
-### [Open-source contributions](OPEN-SOURCE.md)
+<br>
+
+- ### [Open-source contributions](OPEN-SOURCE.md)
 
 The path from local workflow improvements to tested upstream contributions.
