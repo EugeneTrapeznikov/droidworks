@@ -2,6 +2,8 @@
 
 Guarded patches for the installed [`@earendil-works/pi-coding-agent`](https://github.com/earendil-works/pi) npm package. Upstream source is not vendored.
 
+Requires Pi 0.87.1 or newer. Releases are tagged `pi@<tested Pi version>-dw.<n>`.
+
 ## Fullscreen selection colors
 
 [`0001-fullscreen-selection-colors.patch`](patches/0001-fullscreen-selection-colors.patch) adds a `selectionStyle` callback to `pi-tui`; [`0002-fullscreen-selection-theme-roles.patch`](patches/0002-fullscreen-selection-theme-roles.patch) gives fullscreen transcript selection two dedicated optional theme roles:
