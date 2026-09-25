@@ -15,7 +15,7 @@ extension/
   test/                   bun test, no network
 ```
 
-`src/judge/types.ts` is frozen. Its `prefix` / `spec` feature literals and the `choice` / `score` question shapes stay for the deferred ideas in the root README; triage asks only `noul`.
+`src/judge/types.ts` is frozen. Its `prefix` / `spec` feature literals and the `choice` / `score` question shapes are unused; triage asks only `noul`.
 
 ## Configuration
 
