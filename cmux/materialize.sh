@@ -32,9 +32,11 @@ git -C "$staging" init --quiet
 git -C "$staging" remote add origin "$url"
 git -C "$staging" fetch --quiet --depth 1 origin "$commit"
 git -C "$staging" checkout --quiet --detach "$commit"
-git -C "$staging" submodule update --init --depth 1 ghostty
+git -C "$staging" submodule update --init --depth 1 --recursive ghostty vendor/bonsplit
 [[ $(git -C "$staging/ghostty" rev-parse HEAD) == "$ghostty_commit" ]] \
   || fail "Ghostty submodule does not match upstream.lock"
+[[ -f "$staging/vendor/bonsplit/Package.swift" ]] \
+  || fail "bonsplit package submodule is incomplete"
 
 for patch in "$root"/patches/ghostty/*.patch; do
   git -C "$staging/ghostty" apply --check "$patch"

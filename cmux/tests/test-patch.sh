@@ -5,6 +5,8 @@ root=$(CDPATH='' cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 "$root/materialize.sh"
 repo="$root/repo"
 
+[[ -f "$repo/vendor/bonsplit/Package.swift" ]] \
+  || { echo "bonsplit package submodule is incomplete" >&2; exit 1; }
 git -C "$repo" apply --reverse --check "$root/patches/cmux/0001-forward-copy-to-kitty-tuis.patch"
 git -C "$repo/ghostty" apply --reverse --check "$root/patches/ghostty/0001-expose-kitty-keyboard-disambiguation.patch"
 
