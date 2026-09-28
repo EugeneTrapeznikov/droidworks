@@ -2,13 +2,14 @@
 
 A reproducible patch for [cmux issue #11228](https://github.com/manaflow-ai/cmux/issues/11228): ⌘C is swallowed before fullscreen Kitty-keyboard applications such as Pi and Claude Code can handle their own selection.
 
-The source is pinned to stable cmux `v0.64.25` at `b685a275c2e411799857155e37264daf84f7e4d6`. `materialize.sh` verifies the tag and Ghostty submodule commit before applying both patches.
+The source is pinned to stable cmux `v0.64.25` at `b685a275c2e411799857155e37264daf84f7e4d6`. `materialize.sh` verifies the tag and Ghostty submodule commit before applying the ordered patches.
 
 ## Behavior
 
 - A native Ghostty selection keeps the normal Edit → Copy path.
 - With no native selection, Kitty keyboard disambiguation lets ⌘C reach the focused TUI.
 - A shell without Kitty keyboard disambiguation keeps cmux's unavailable-Copy no-op.
+- The debug footer shows the build tag (`DROIDWORKS`) instead of the generic dev-build warning.
 
 Ghostty needs a performable Copy binding so an unavailable native copy can fall through to the application:
 
@@ -22,7 +23,7 @@ keybind = performable:cmd+c=copy_to_clipboard:mixed
 cmux/tests/test-patch.sh
 ```
 
-The test checks both patches against the pinned source and verifies the routing policy, C ABI, and regression test are present.
+The test checks every patch against the pinned source and verifies the routing policy, C ABI, branding, and regression test are present.
 
 ## Build and install
 

@@ -1,0 +1,16 @@
+diff --git a/Sources/VerticalTabsSidebar+EmptyAreasAndFooter.swift b/Sources/VerticalTabsSidebar+EmptyAreasAndFooter.swift
+index e3d2e052..a224fc2c 100644
+--- a/Sources/VerticalTabsSidebar+EmptyAreasAndFooter.swift
++++ b/Sources/VerticalTabsSidebar+EmptyAreasAndFooter.swift
+@@ -541,7 +541,10 @@ struct SidebarDevFooter: View {
+         VStack(alignment: .leading, spacing: 6) {
+             SidebarFooterButtons(updateViewModel: updateViewModel, fileExplorerState: fileExplorerState, modifierKeyMonitor: modifierKeyMonitor, onSendFeedback: onSendFeedback)
+             if showSidebarDevBuildBanner {
+-                Text(String(localized: "debug.devBuildBanner.title", defaultValue: "THIS IS A DEV BUILD"))
++                Text(
++                    ProcessInfo.processInfo.environment["CMUX_TAG"]?.uppercased()
++                        ?? String(localized: "debug.devBuildBanner.title", defaultValue: "THIS IS A DEV BUILD")
++                )
+                     .cmuxFont(size: 11, weight: .semibold)
+                     .foregroundColor(.red)
+             }
