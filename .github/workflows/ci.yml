@@ -6,6 +6,12 @@ on:
   pull_request:
 
 jobs:
+  cmux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmux/tests/test-patch.sh
+
   pi-jev-triage:
     runs-on: ubuntu-latest
     defaults:

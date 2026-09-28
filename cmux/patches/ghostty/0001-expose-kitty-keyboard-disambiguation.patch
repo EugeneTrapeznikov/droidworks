@@ -1,0 +1,48 @@
+diff --git a/include/ghostty.h b/include/ghostty.h
+index e3cc10b..629e456 100644
+--- a/include/ghostty.h
++++ b/include/ghostty.h
+@@ -1667,6 +1667,7 @@ GHOSTTY_API void ghostty_surface_complete_clipboard_request(ghostty_surface_t,
+                                                                const char*,
+                                                                void*,
+                                                                bool);
++GHOSTTY_API bool ghostty_surface_uses_kitty_keyboard_disambiguation(ghostty_surface_t);
+ GHOSTTY_API bool ghostty_surface_has_selection(ghostty_surface_t);
+ GHOSTTY_API bool ghostty_surface_select_cursor_cell(ghostty_surface_t);
+ GHOSTTY_API bool ghostty_surface_select_cursor_line(ghostty_surface_t);
+diff --git a/src/Surface.zig b/src/Surface.zig
+index 6739095..077b0bd 100644
+--- a/src/Surface.zig
++++ b/src/Surface.zig
+@@ -2640,6 +2640,13 @@ pub fn dumpTextLocked(
+     };
+ }
+ 
++/// Returns whether the active screen can encode modified printable keys.
++pub fn usesKittyKeyboardDisambiguation(self: *const Surface) bool {
++    self.renderer_state.mutex.lockUncancelable(global.io());
++    defer self.renderer_state.mutex.unlock(global.io());
++    return self.io.terminal.screens.active.kitty_keyboard.current().disambiguate;
++}
++
+ /// Returns true if the terminal has a selection.
+ pub fn hasSelection(self: *const Surface) bool {
+     self.renderer_state.mutex.lockUncancelable(global.io());
+diff --git a/src/apprt/embedded.zig b/src/apprt/embedded.zig
+index ca17a22..dcba66f 100644
+--- a/src/apprt/embedded.zig
++++ b/src/apprt/embedded.zig
+@@ -2626,6 +2626,13 @@ pub const CAPI = struct {
+         return surface.core_surface.font_size_adjusted;
+     }
+ 
++    /// Returns whether the active screen uses Kitty keyboard disambiguation.
++    export fn ghostty_surface_uses_kitty_keyboard_disambiguation(
++        surface: *Surface,
++    ) bool {
++        return surface.core_surface.usesKittyKeyboardDisambiguation();
++    }
++
+     /// Returns true if the surface has a selection.
+     export fn ghostty_surface_has_selection(surface: *Surface) bool {
+         return surface.core_surface.hasSelection();

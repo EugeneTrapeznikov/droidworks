@@ -11,4 +11,6 @@ subagent-artifacts/
 **/local-judge/*.jsonl
 .venv/
 node_modules/
+cmux/repo/
+cmux/.repo.*
 **/bench/session-replay/flagged-*

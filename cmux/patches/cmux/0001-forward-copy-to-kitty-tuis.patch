@@ -1,0 +1,71 @@
+diff --git a/Sources/GhosttyTerminalView.swift b/Sources/GhosttyTerminalView.swift
+index a603d9c7..42889c92 100644
+--- a/Sources/GhosttyTerminalView.swift
++++ b/Sources/GhosttyTerminalView.swift
+@@ -5712,10 +5712,8 @@ class GhosttyNSView: NSView, NSUserInterfaceValidations {
+     }
+ 
+     /// Keep the standard Copy shortcut a native no-op when AppKit disables
+-    /// Copy. Replaying this menu miss into Ghostty lets the failed Copy binding
+-    /// enter its terminal-input path, which moves scrollback to the bottom when
+-    /// `scroll-to-bottom=keystroke` is enabled even if the terminal program
+-    /// does not visibly echo that input.
++    /// Copy in a shell that cannot encode the chord. Kitty-aware applications
++    /// receive the menu miss through Ghostty's terminal-input path.
+     func consumeUnavailableCopyMenuAction(_ event: NSEvent) -> Bool {
+         let normalizedFlags = event.modifierFlags
+             .intersection(.deviceIndependentFlagsMask)
+@@ -5726,7 +5724,11 @@ class GhosttyNSView: NSView, NSUserInterfaceValidations {
+             return false
+         }
+         guard let surface = ensureSurfaceReadyForInput(),
+-              !hasCopyableTerminalSelection(surface: surface) else {
++              Self.shouldConsumeUnavailableCopyMenuAction(
++                  hasCopyableSelection: hasCopyableTerminalSelection(surface: surface),
++                  usesKittyKeyboardDisambiguation:
++                      ghostty_surface_uses_kitty_keyboard_disambiguation(surface)
++              ) else {
+             return false
+         }
+ 
+@@ -5737,6 +5739,13 @@ class GhosttyNSView: NSView, NSUserInterfaceValidations {
+         )
+     }
+ 
++    static func shouldConsumeUnavailableCopyMenuAction(
++        hasCopyableSelection: Bool,
++        usesKittyKeyboardDisambiguation: Bool
++    ) -> Bool {
++        !hasCopyableSelection && !usesKittyKeyboardDisambiguation
++    }
++
+     private func copyCurrentViewportLinesToClipboard(
+         surface: ghostty_surface_t,
+         lineCount: Int
+diff --git a/cmuxTests/WindowKeyDownReplayGuardTests.swift b/cmuxTests/WindowKeyDownReplayGuardTests.swift
+index 273df497..430822e4 100644
+--- a/cmuxTests/WindowKeyDownReplayGuardTests.swift
++++ b/cmuxTests/WindowKeyDownReplayGuardTests.swift
+@@ -314,6 +314,22 @@ struct WindowKeyDownReplayGuardTests {
+         #expect(responder.keyDownEvents.count == 2)
+     }
+ 
++    @Test
++    func unavailableCopyPolicyForwardsKittyApplicationKeysOnly() {
++        #expect(GhosttyNSView.shouldConsumeUnavailableCopyMenuAction(
++            hasCopyableSelection: false,
++            usesKittyKeyboardDisambiguation: false
++        ))
++        #expect(!GhosttyNSView.shouldConsumeUnavailableCopyMenuAction(
++            hasCopyableSelection: false,
++            usesKittyKeyboardDisambiguation: true
++        ))
++        #expect(!GhosttyNSView.shouldConsumeUnavailableCopyMenuAction(
++            hasCopyableSelection: true,
++            usesKittyKeyboardDisambiguation: false
++        ))
++    }
++
+     @Test
+     func terminalUnavailableCopyDoesNotReplayIntoGhostty() {
+         _ = NSApplication.shared

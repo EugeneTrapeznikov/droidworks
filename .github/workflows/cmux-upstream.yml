@@ -1,0 +1,13 @@
+name: cmux upstream
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 9 * * 1'
+
+jobs:
+  stable-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmux/scripts/check-upstream.sh --ci
