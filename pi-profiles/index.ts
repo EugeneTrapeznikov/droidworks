@@ -9,20 +9,49 @@
 //       match: [{ git_remote_includes: "…" }, { cwd_prefix: "~/…" }]
 //       pi: { model: provider/id, config: { <extension-id>: { … } } }
 //     personal:
-//       pi: { config: { … } }
+//       pi:
+//         providers: { <provider-id>: { baseUrl: http://127.0.0.1:8787/… } }
+//         mcp: { <server>: { command: …, args: [ … ] } }   # needs pi-mcp-adapter
 //
 // First profile with any matching rule wins; otherwise `default`. No file = no push.
 import { execFileSync } from "node:child_process";
 import { readFileSync, realpathSync } from "node:fs";
+import { connect } from "node:net";
 import { homedir } from "node:os";
 import { join, resolve, sep } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { parse as parseYaml } from "yaml";
 
 export const CONFIG_OVERLAY_CHANNEL = "pi-config-overlay:v1";
+const MCP_RUNTIME_REGISTER_EVENT = "pi-mcp-adapter:runtime-register:v1";
+
+type Registration = { dispose(): Promise<void> };
+type RegisterRequest = { version: 1; name: string; definition: unknown; result?: { ok: true; registration: Registration } | { ok: false; error: Error } };
+
+/** Register each server with pi-mcp-adapter; returns the registrations and the failures. */
+export function registerMcp(pi: Pick<ExtensionAPI, "events">, servers: Record<string, unknown>): { registered: Registration[]; failed: string[] } {
+	const registered: Registration[] = [], failed: string[] = [];
+	for (const [name, definition] of Object.entries(servers)) {
+		const request: RegisterRequest = { version: 1, name, definition };
+		pi.events.emit(MCP_RUNTIME_REGISTER_EVENT, request);
+		if (request.result?.ok) registered.push(request.result.registration);
+		else failed.push(`${name}: ${request.result ? request.result.error.message : "pi-mcp-adapter not loaded"}`);
+	}
+	return { registered, failed };
+}
 
 export interface Match { cwd_prefix?: string; git_remote_includes?: string }
-export interface Profile { match?: Match[]; pi?: { model?: string; config?: Record<string, unknown> } }
+export interface ProviderOverride { baseUrl?: string; headers?: Record<string, string> }
+export interface Profile {
+	match?: Match[];
+	pi?: {
+		model?: string;
+		config?: Record<string, unknown>;
+		providers?: Record<string, ProviderOverride>;
+		/** MCP server definitions registered with pi-mcp-adapter for the session. */
+		mcp?: Record<string, Record<string, unknown>>;
+	};
+}
 export interface ProfilesFile { default?: string; profiles: Record<string, Profile> }
 
 const profilesPath = () => process.env.AGENT_PROFILES_PATH || join(homedir(), ".config/agent-profiles/profiles.yaml");
@@ -66,11 +95,52 @@ export function loadProfiles(path = profilesPath()): ProfilesFile | undefined {
 	return file;
 }
 
+/** True when `url`'s host:port accepts a TCP connection within `timeoutMs`. */
+export function reachable(url: string, timeoutMs = 500): Promise<boolean> {
+	let host: string, port: number;
+	try {
+		const u = new URL(url);
+		host = u.hostname;
+		port = Number(u.port) || (u.protocol === "https:" ? 443 : 80);
+	} catch { return Promise.resolve(false); }
+	return new Promise((done) => {
+		const socket = connect({ host, port });
+		const finish = (ok: boolean) => { socket.destroy(); done(ok); };
+		socket.setTimeout(timeoutMs, () => finish(false));
+		socket.once("connect", () => finish(true));
+		socket.once("error", () => finish(false));
+	});
+}
+
 /** --model/--provider on the command line beats the profile. */
 const cliPicksModel = () => process.argv.some((a) => /^--(model|provider|models)(=|$)/.test(a));
 
-export default function piProfiles(pi: ExtensionAPI): void {
+export default async function piProfiles(pi: ExtensionAPI): Promise<void> {
+	// Provider overrides must be registered in the factory to reach startup model selection, so they
+	// resolve against the launch directory. A target that does not accept connections is skipped, so a
+	// stopped local proxy never breaks the session.
+	// ponytail: resolves process.cwd(), not a resumed session's cwd; re-resolve per session if that matters.
+	const skipped: string[] = [];
+	try {
+		const file = loadProfiles();
+		const name = file && resolveProfile(file, process.cwd());
+		for (const [id, override] of Object.entries((name && file!.profiles[name]?.pi?.providers) || {})) {
+			if (override?.baseUrl && !(await reachable(override.baseUrl))) { skipped.push(`${id} → ${override.baseUrl}`); continue; }
+			pi.registerProvider(id, override as any);
+		}
+	} catch { /* reported by session_start */ }
+
+	let mcpRegistrations: Registration[] = [];
+	const disposeMcp = async () => {
+		const current = mcpRegistrations;
+		mcpRegistrations = [];
+		await Promise.allSettled(current.map((r) => r.dispose()));
+	};
+	pi.on("session_shutdown", disposeMcp);
+
 	pi.on("session_start", async (event, ctx) => {
+		if (skipped.length && ctx.hasUI) ctx.ui.notify(`pi-profiles: unreachable, using default endpoint: ${skipped.join(", ")}`, "warning");
+		await disposeMcp();
 		let file: ProfilesFile | undefined;
 		try { file = loadProfiles(); } catch (e: any) {
 			if (ctx.hasUI) ctx.ui.notify(`pi-profiles: ${e?.message ?? e}; no profile applied`, "error");
@@ -82,6 +152,10 @@ export default function piProfiles(pi: ExtensionAPI): void {
 		process.env.AGENT_PROFILE = name ?? "";
 		pi.events.emit(CONFIG_OVERLAY_CHANNEL, { source: "pi-profiles", profile: name ?? null, config: profile?.pi?.config ?? {} });
 		if (ctx.hasUI) ctx.ui.setStatus("pi-profiles", name ? `👤 profile:${name}` : undefined);
+
+		const mcp = registerMcp(pi, profile?.pi?.mcp ?? {});
+		mcpRegistrations = mcp.registered;
+		if (mcp.failed.length && ctx.hasUI) ctx.ui.notify(`pi-profiles: MCP not registered: ${mcp.failed.join("; ")}`, "warning");
 
 		const model = profile?.pi?.model;
 		// Only fresh sessions: a resumed/forked session keeps the model it was using.

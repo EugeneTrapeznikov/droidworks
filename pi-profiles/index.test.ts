@@ -2,7 +2,8 @@ import { expect, test } from "bun:test";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { loadProfiles, resolveProfile, type ProfilesFile } from "./index.ts";
+import { createServer } from "node:net";
+import { loadProfiles, reachable, registerMcp, resolveProfile, type ProfilesFile } from "./index.ts";
 
 const file: ProfilesFile = {
 	default: "personal",
@@ -37,4 +38,25 @@ test("missing file is no profile; malformed file throws", () => {
 	expect(resolveProfile(loadProfiles(join(dir, "ok.yaml"))!, "/tmp/work/x", () => "")).toBe("work");
 	writeFileSync(join(dir, "legacy.json"), JSON.stringify(file));
 	expect(loadProfiles(join(dir, "legacy.json"))?.default).toBe("personal");
+});
+
+test("reachable distinguishes a listening port from a closed one", async () => {
+	const server = createServer().listen(0, "127.0.0.1");
+	await new Promise((r) => server.once("listening", r));
+	const port = (server.address() as { port: number }).port;
+	expect(await reachable(`http://127.0.0.1:${port}/backend-api`)).toBe(true);
+	server.close();
+	await new Promise((r) => server.once("close", r));
+	expect(await reachable(`http://127.0.0.1:${port}/backend-api`)).toBe(false);
+	expect(await reachable("not a url")).toBe(false);
+});
+
+test("registerMcp reports registrations and a missing adapter", () => {
+	const handlers: ((data: any) => void)[] = [];
+	const events = { on: (_: string, fn: (data: any) => void) => { handlers.push(fn); return () => {}; }, emit: (_: string, data: unknown) => handlers.forEach((fn) => fn(data)) };
+	expect(registerMcp({ events } as any, { serena: { command: "serena" } }).failed).toEqual(["serena: pi-mcp-adapter not loaded"]);
+	events.on("x", (req) => { req.result = req.name === "bad" ? { ok: false, error: new Error("duplicate") } : { ok: true, registration: { dispose: async () => {} } }; });
+	const out = registerMcp({ events } as any, { serena: { command: "serena" }, bad: { command: "x" } });
+	expect(out.registered).toHaveLength(1);
+	expect(out.failed).toEqual(["bad: duplicate"]);
 });

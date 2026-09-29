@@ -24,6 +24,10 @@ profiles:
     pi:
       config:
         moa-harness: { jev: { enabled: true } }
+      providers:
+        openai-codex: { baseUrl: http://127.0.0.1:8787/backend-api }   # e.g. a local compression proxy
+      mcp:
+        serena: { command: serena, args: [start-mcp-server, --context, ide, --project-from-cwd] }
 ```
 
 - The first profile with any matching rule wins; otherwise `default`. A rule matches when all its conditions hold. `cwd_prefix` is path-segment-safe (`~` expands, real paths). `git_remote_includes` is a substring of `git remote get-url origin`.
@@ -35,6 +39,8 @@ On `session_start`:
 
 - `pi.events` emits `pi-config-overlay:v1` with `{ source: "pi-profiles", profile, config }`. A consumer reads `config["<its-id>"]` and applies it over its own configuration; each push replaces the previous one.
 - `pi.model` (`provider/id`) is applied to fresh sessions (`startup`, `new`), unless `--model`, `--provider`, or `--models` was passed. Resumed and forked sessions keep their model.
+- `pi.providers` overrides a provider's `baseUrl` and/or `headers` through `pi.registerProvider`, keeping its models and login. Overrides are registered when the extension loads, against the launch directory, so they reach startup model selection. A `baseUrl` whose host and port do not accept a connection within 500 ms is skipped with a warning, so a stopped local proxy never breaks the session.
+- `pi.mcp` registers MCP servers for the session with [`pi-mcp-adapter`](https://www.npmjs.com/package/pi-mcp-adapter) (runtime registration; nothing is written to its config files). They are reached through the adapter's `mcp` proxy tool and disposed when the session ends.
 - `AGENT_PROFILE=<name>` is exported to child processes, and the footer shows `👤 profile:<name>` ([`pi-footer-nerdfonts`](../pi-footer-nerdfonts/) renders the glyph).
 
 ## Install
