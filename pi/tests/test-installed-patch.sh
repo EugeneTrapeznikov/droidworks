@@ -74,6 +74,39 @@ for name, text in {
 )
 PY
 
+# Pi 0.99 layout: renamed highlight loop variable and background-token set, bundle split across chunks.
+V099="$TMP/v099"
+cp -R "$PKG" "$V099"
+python3 -B - "$PATCHER" "$V099" <<'PY'
+import importlib.util
+from pathlib import Path
+import sys
+
+spec = importlib.util.spec_from_file_location("pi_patcher", sys.argv[1])
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+package = Path(sys.argv[2])
+chunks = package / "dist/bundle/chunks"
+(chunks / "chunk-fixture.js").unlink()
+(chunks / "chunk-tui.js").write_text(
+    "class TuiAltScreen{" + module.BUNDLE_FIELDS_OLD
+    + "constructor(options={}){" + module.BUNDLE_CONSTRUCTOR_OLD + "}"
+    + module.BUNDLE_HIGHLIGHT_ORIGINAL_V099 + "}\n"
+    + module.BUNDLE_FALLBACK_OLD + module.BUNDLE_BG_KEYS_V099_OLD + '])\n'
+)
+(chunks / "chunk-app.js").write_text(
+    "function createInteractiveTui(terminal,options,theme){"
+    + module.BUNDLE_RENDERER_OLD + "(text)}}\n" + module.BUNDLE_JSON_OLD
+)
+theme = package / "dist/modes/interactive/theme/theme.js"
+theme.write_text(module.THEME_FALLBACK_OLD + module.THEME_BG_KEYS_V099_OLD)
+PY
+PI_CODING_AGENT_PACKAGE_DIR="$V099" "$PATCHER" | grep -q 'chunk-app.js, .*chunk-tui.js'
+PI_CODING_AGENT_PACKAGE_DIR="$V099" "$PATCHER" --check >/dev/null
+PI_CODING_AGENT_PACKAGE_DIR="$V099" "$PATCHER" | grep -q 'already applied'
+grep -q 'BACKGROUND_TOKENS=new Set(\["selectedBg","fullscreenSelectionColor","searchMatchBg"' "$V099/dist/bundle/chunks/chunk-tui.js"
+grep -q '"fullscreenSelectionColor",' "$V099/dist/modes/interactive/theme/theme.js"
+
 PI_CODING_AGENT_PACKAGE_DIR="$PKG" "$PATCHER"
 PI_CODING_AGENT_PACKAGE_DIR="$PKG" "$PATCHER" --check
 PI_CODING_AGENT_PACKAGE_DIR="$PKG" "$PATCHER" | grep -q 'already applied'

@@ -32,4 +32,4 @@ pi/tests/test-installed-patch.sh
 
 Reapply the patch after Pi installation or updates. Update the canonical source patch, compiled replacements, and regression test when the relevant Pi code changes.
 
-The TUI source patch is based on `@earendil-works/pi-tui@0.86.0` (`v0.86.0`, commit `ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc`). The theme roles patch targets the coding-agent source shape installed with Pi `0.87.1`.
+The TUI source patch is based on `@earendil-works/pi-tui@0.86.0` (`v0.86.0`, commit `ecac0a9c4edad3dac5d9f8b40e0c7db7a56471fc`). The theme roles patch targets the coding-agent source shapes installed with Pi `0.87.1` and `0.99.0` (0.99 renamed the bundled highlight loop variable and the background-token set). The bundler may place targets in different chunks; each target must appear in exactly one.
