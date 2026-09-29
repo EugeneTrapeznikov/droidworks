@@ -1,0 +1,8 @@
+{
+  "name": "pi-profiles",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "yaml": "2.9.0"
+  }
+}
