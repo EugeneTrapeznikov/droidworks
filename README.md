@@ -23,7 +23,6 @@ Focused on making coding agents better at real software work: sharper tools, les
 - [`pi-jev-triage`](pi-jev-triage/) - Tool-result triage for Pi: a Jev decision model hides the parts of big tool results the agent won't need, freeing up to 10% of context in long sessions with no drop in SWE-bench tasks solved.
 - [`pi-profiles`](pi-profiles/) - Per-repo Pi profiles from one private YAML file: pushes model and per-extension settings into the session, so work-specific rules never live in code.
 - [`pi-update`](pi-update/) - Background `pi update --all` on every startup that reapplies the guarded Pi patches.
-- [`tokenjuice-rtk`](tokenjuice-rtk/) - Agent-harness integration that coordinates two token-saving tools, providing layered output optimization without double processing.
 
 **Also**
 

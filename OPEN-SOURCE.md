@@ -14,12 +14,4 @@ The installed-package patch is version- and source-shape-guarded. It fails close
 
 [Implementation](pi/) · [Upstream proposal](https://github.com/earendil-works/pi/issues/9715)
 
-## TokenJuice + RTK: one optimizer per command
-
-RTK and TokenJuice both reduce verbose command output. Running both naively can process the same result twice.
-
-The integration lets RTK own supported commands while TokenJuice remains the fallback for everything else. The generated extension patch is guarded by version, source shape, and behavioral tests.
-
-[Implementation](tokenjuice-rtk/) · [Upstream work](https://github.com/vincentkoc/tokenjuice/pull/235)
-
 Temporary contribution forks live under [droidworks-oss](https://github.com/droidworks-oss).
