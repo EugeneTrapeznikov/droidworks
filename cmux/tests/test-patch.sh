@@ -28,7 +28,8 @@ surface = (repo / "ghostty/src/Surface.zig").read_text()
 
 assert "ghostty_surface_uses_kitty_keyboard_disambiguation(surface)" in view
 assert "!hasCopyableSelection && !usesKittyKeyboardDisambiguation" in view
-assert 'environment["CMUX_TAG"]?.uppercased()' in sidebar
+assert 'environment["CMUX_TAG"]?.lowercased()' in sidebar
+assert ".foregroundStyle(.secondary)" in sidebar
 assert "unavailableCopyPolicyForwardsKittyApplicationKeysOnly" in tests
 assert "GHOSTTY_API bool ghostty_surface_uses_kitty_keyboard_disambiguation" in header
 assert "export fn ghostty_surface_uses_kitty_keyboard_disambiguation" in embedded

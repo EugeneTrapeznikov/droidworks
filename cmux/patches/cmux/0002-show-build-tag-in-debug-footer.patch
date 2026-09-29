@@ -1,16 +1,25 @@
 diff --git a/Sources/VerticalTabsSidebar+EmptyAreasAndFooter.swift b/Sources/VerticalTabsSidebar+EmptyAreasAndFooter.swift
-index e3d2e052..a224fc2c 100644
+index e3d2e052..43119035 100644
 --- a/Sources/VerticalTabsSidebar+EmptyAreasAndFooter.swift
 +++ b/Sources/VerticalTabsSidebar+EmptyAreasAndFooter.swift
-@@ -541,7 +541,10 @@ struct SidebarDevFooter: View {
-         VStack(alignment: .leading, spacing: 6) {
+@@ -538,12 +538,16 @@ struct SidebarDevFooter: View {
+     private var showSidebarDevBuildBanner = DevBuildBannerDebugSettings.defaultShowSidebarBanner
+ 
+     var body: some View {
+-        VStack(alignment: .leading, spacing: 6) {
++        HStack(spacing: 8) {
              SidebarFooterButtons(updateViewModel: updateViewModel, fileExplorerState: fileExplorerState, modifierKeyMonitor: modifierKeyMonitor, onSendFeedback: onSendFeedback)
              if showSidebarDevBuildBanner {
 -                Text(String(localized: "debug.devBuildBanner.title", defaultValue: "THIS IS A DEV BUILD"))
+-                    .cmuxFont(size: 11, weight: .semibold)
+-                    .foregroundColor(.red)
 +                Text(
-+                    ProcessInfo.processInfo.environment["CMUX_TAG"]?.uppercased()
-+                        ?? String(localized: "debug.devBuildBanner.title", defaultValue: "THIS IS A DEV BUILD")
++                    ProcessInfo.processInfo.environment["CMUX_TAG"]?.lowercased()
++                        ?? String(localized: "debug.devBuildBanner.title", defaultValue: "dev build")
 +                )
-                     .cmuxFont(size: 11, weight: .semibold)
-                     .foregroundColor(.red)
++                    .cmuxFont(size: 11, weight: .medium)
++                    .foregroundStyle(.secondary)
++                    .lineLimit(1)
              }
+         }
+         .padding(.leading, 6)

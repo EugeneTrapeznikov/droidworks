@@ -9,7 +9,7 @@ The source is pinned to stable cmux `v0.64.25` at `b685a275c2e411799857155e37264
 - A native Ghostty selection keeps the normal Edit → Copy path.
 - With no native selection, Kitty keyboard disambiguation lets ⌘C reach the focused TUI.
 - A shell without Kitty keyboard disambiguation keeps cmux's unavailable-Copy no-op.
-- The debug footer shows the build tag (`DROIDWORKS`) instead of the generic dev-build warning.
+- The debug footer shows the build tag (`droidworks`) beside the footer controls.
 
 Ghostty needs a performable Copy binding so an unavailable native copy can fall through to the application:
 
