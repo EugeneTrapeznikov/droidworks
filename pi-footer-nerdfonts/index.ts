@@ -11,6 +11,7 @@ const GLYPHS: Record<string, string> = {
   "🌿": "󰌪",
   "⚡": "󱐋",
   "🔥": "󰈸",
+  "👤": "󰀄",
 };
 
 export function nerdifyFooterStatus(text: string): string {
@@ -60,5 +61,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     nerdifyFooterStatus("🧠 agentmemory 🔌 MCP ○ 🐴 ponytail: ⚡ FULL"),
     "󰧑 agentmemory 󰒍 MCP 󰝦 󱖿 ponytail: 󱐋 FULL",
   );
+  assert.equal(nerdifyFooterStatus("👤 profile:work"), "󰀄 profile:work");
   console.log("pi-footer-nerdfonts: ok");
 }

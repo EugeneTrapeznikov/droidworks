@@ -16,7 +16,7 @@ A small Pi extension that saves your eyes from emojis in the footer by replacing
 
 ## Mappings
 
-The extension currently covers status text produced by agentmemory, MCP, and Ponytail:
+The extension currently covers status text produced by agentmemory, MCP, Ponytail, and pi-profiles:
 
 | Extension | Meaning | Original | Nerd Font |
 |---|---|---:|---:|
@@ -28,6 +28,7 @@ The extension currently covers status text produced by agentmemory, MCP, and Pon
 | Ponytail | Lite | `🌿` | `󰌪` |
 | Ponytail | Full | `⚡` | `󱐋` |
 | Ponytail | Ultra | `🔥` | `󰈸` |
+| pi-profiles | Profile | `👤` | `󰀄` |
 
 Unmatched footer text passes through unchanged.
 
