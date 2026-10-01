@@ -15,11 +15,16 @@ developer_dir=$(xcode-select -p 2>/dev/null || true)
 [[ -d "$developer_dir/Platforms/MacOSX.platform/Developer/SDKs" ]] \
   || { echo "Full Xcode is required; xcode-select currently points to ${developer_dir:-nothing}" >&2; exit 1; }
 
+name="cmux Droidworks"
+bundle_id="dev.droidworks.cmux"
+# reload.sh quits every running app with this bundle id, including the
+# installed copy and any terminal session running this build inside it.
+! ps -axo comm= | grep -Fq "/$name.app/Contents/MacOS/" \
+  || { echo "Quit $name first, then build from another terminal" >&2; exit 1; }
+
 "$root/materialize.sh"
 repo="$root/repo"
 derived="${CMUX_DROIDWORKS_DERIVED_DATA:-$HOME/Library/Developer/Xcode/DerivedData/cmux-droidworks}"
-name="cmux Droidworks"
-bundle_id="dev.droidworks.cmux"
 
 (
   cd "$repo"
@@ -36,18 +41,17 @@ app="$derived/Build/Products/Debug/$name.app"
 plist="$app/Contents/Info.plist"
 [[ -f "$plist" ]] || { echo "missing built app: $app" >&2; exit 1; }
 
-# The fork updates by bumping upstream.lock and rebuilding. Removing Sparkle's
-# feed/key prevents an official release from replacing the patched bundle.
-/usr/libexec/PlistBuddy -c 'Delete :SUFeedURL' "$plist" 2>/dev/null || true
+# Sparkle keeps checking the official feed so the sidebar shows new releases;
+# patch 0003 turns Install into opening the release page. Without the EdDSA
+# key Sparkle also cannot validate an official archive, so a stray install
+# path cannot replace the patched bundle.
 /usr/libexec/PlistBuddy -c 'Delete :SUPublicEDKey' "$plist" 2>/dev/null || true
-/usr/libexec/PlistBuddy -c 'Delete :SUEnableAutomaticChecks' "$plist" 2>/dev/null || true
-/usr/libexec/PlistBuddy -c 'Add :SUEnableAutomaticChecks bool false' "$plist"
 codesign --force --sign - "$app"
 
 [[ $(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$plist") == "$bundle_id" ]] \
   || { echo "unexpected bundle identifier" >&2; exit 1; }
-! /usr/libexec/PlistBuddy -c 'Print :SUFeedURL' "$plist" >/dev/null 2>&1 \
-  || { echo "Sparkle feed remains enabled" >&2; exit 1; }
+! /usr/libexec/PlistBuddy -c 'Print :SUPublicEDKey' "$plist" >/dev/null 2>&1 \
+  || { echo "Sparkle signing key remains" >&2; exit 1; }
 codesign --verify --deep --strict "$app"
 
 if [[ $install == 1 ]]; then

@@ -10,6 +10,7 @@ The source is pinned to stable cmux `v0.64.25` at `b685a275c2e411799857155e37264
 - With no native selection, Kitty keyboard disambiguation lets ⌘C reach the focused TUI.
 - A shell without Kitty keyboard disambiguation keeps cmux's unavailable-Copy no-op.
 - The debug footer shows the build tag (`droidworks`) beside the footer controls.
+- The sidebar update pill reports new official releases; Install opens the GitHub release page instead of replacing the patched app.
 
 Ghostty needs a performable Copy binding so an unavailable native copy can fall through to the application:
 
@@ -41,11 +42,13 @@ The build uses upstream's tagged development workflow with production services a
 - independent tagged socket/state
 - bundled CLI: `cmux Droidworks.app/Contents/Resources/bin/cmux`
 
+Quit cmux Droidworks and build from another terminal (Terminal.app or official cmux): upstream's tagged reload quits every running app with the Droidworks bundle ID.
+
 `--install` places the app in `/Applications` and moves an existing Droidworks build to `~/.Trash`. It does not replace official cmux or its CLI links.
 
 ## Updates
 
-Sparkle feed metadata is removed from the patched bundle so an official update cannot overwrite the patch. Keep official cmux installed for rollback and its release notification UI. Check the fork's stable pin directly with:
+The app checks the official stable feed and shows "Update available" in the sidebar when cmux ships a release. Install opens the release page; the build also strips Sparkle's EdDSA key, so an official archive cannot replace the patched bundle. Keep official cmux installed for rollback. Check the fork's stable pin directly with:
 
 ```bash
 cmux/scripts/check-upstream.sh

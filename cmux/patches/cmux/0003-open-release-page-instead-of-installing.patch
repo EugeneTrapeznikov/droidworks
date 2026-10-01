@@ -1,0 +1,28 @@
+diff --git a/Packages/macOS/CmuxUpdater/Sources/CmuxUpdater/UpdateController+InstallAttempt.swift b/Packages/macOS/CmuxUpdater/Sources/CmuxUpdater/UpdateController+InstallAttempt.swift
+index d81e5750..f0bb7cfe 100644
+--- a/Packages/macOS/CmuxUpdater/Sources/CmuxUpdater/UpdateController+InstallAttempt.swift
++++ b/Packages/macOS/CmuxUpdater/Sources/CmuxUpdater/UpdateController+InstallAttempt.swift
+@@ -1,3 +1,4 @@
++import AppKit
+ import Foundation
+ 
+ /// The "attempt update" policy: the single user-facing install entry point, the actions it
+@@ -13,15 +14,9 @@ extension UpdateController {
+     /// surfaced, so a newer release published in the meantime is installed directly rather than
+     /// prompting the user again right after relaunch (issue #6366).
+     public func attemptUpdate() {
+-        model.discardPendingChanges()
+-        let action = attemptCoordinator.requestInstallLatest(currentState: model.state)
+-        if action == .startFreshCheck {
+-            // The user committed to installing. Arm the watchdog so that if the flow never reaches
+-            // downloading/installing (or another visible outcome) it surfaces an error instead of
+-            // silently looping on "Update Available".
+-            installWatchdog.arm { [weak self] in self?.fireInstallWatchdogIfStalled() }
+-        }
+-        performAttemptAction(action)
++        // Droidworks updates by bumping upstream.lock and rebuilding, so installing the
++        // official release would replace the patched bundle. Show the release instead.
++        NSWorkspace.shared.open(URL(string: "https://github.com/manaflow-ai/cmux/releases/latest")!)
+     }
+ 
+     private func fireInstallWatchdogIfStalled() {

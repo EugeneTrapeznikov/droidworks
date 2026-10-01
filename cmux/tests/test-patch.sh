@@ -25,6 +25,8 @@ tests = (repo / "cmuxTests/WindowKeyDownReplayGuardTests.swift").read_text()
 header = (repo / "ghostty/include/ghostty.h").read_text()
 embedded = (repo / "ghostty/src/apprt/embedded.zig").read_text()
 surface = (repo / "ghostty/src/Surface.zig").read_text()
+install = (repo / "Packages/macOS/CmuxUpdater/Sources/CmuxUpdater/UpdateController+InstallAttempt.swift").read_text()
+attempt = install.split("public func attemptUpdate() {", 1)[1].split("\n    }\n", 1)[0]
 
 assert "ghostty_surface_uses_kitty_keyboard_disambiguation(surface)" in view
 assert "!hasCopyableSelection && !usesKittyKeyboardDisambiguation" in view
@@ -34,5 +36,6 @@ assert "unavailableCopyPolicyForwardsKittyApplicationKeysOnly" in tests
 assert "GHOSTTY_API bool ghostty_surface_uses_kitty_keyboard_disambiguation" in header
 assert "export fn ghostty_surface_uses_kitty_keyboard_disambiguation" in embedded
 assert "screens.active.kitty_keyboard.current().disambiguate" in surface
-print("cmux copy-routing patch checks passed")
+assert "releases/latest" in attempt and "performAttemptAction" not in attempt
+print("cmux patch checks passed")
 PY
