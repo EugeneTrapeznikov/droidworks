@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { chmodSync, mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -9,6 +10,7 @@ const stateFile = join(tempHome, ".pi", "agent", "pi-update", "state.json");
 const lockFile = join(tempHome, ".pi", "agent", "pi-update", "update.lock");
 const commandLog = join(tempHome, "commands.log");
 const patchLog = join(tempHome, "patches.log");
+const pgidLog = join(tempHome, "pgid.log");
 const fakePi = join(tempHome, "fake-pi");
 const fakePatcher = join(tempHome, "fake-patcher");
 
@@ -41,7 +43,7 @@ async function waitForCommandCount(expected, timeoutMs = 3000) {
 try {
   writeFileSync(
     fakePi,
-    `#!/bin/sh\nprintf '%s\\n' "$*" >> "${commandLog}"\nprintf 'fake update ok\\n'\n`,
+    `#!/bin/sh\nprintf '%s\\n' "$*" >> "${commandLog}"\nps -o pgid= -p $$ > "${pgidLog}"\nprintf 'fake update ok\\n'\n`,
     "utf8",
   );
   chmodSync(fakePi, 0o755);
@@ -97,6 +99,13 @@ try {
   assert.equal(readState().lastExitCode, 0);
   assert.equal(readState().lastPatchExitCode, 0);
   assert.equal(readFileSync(patchLog, "utf8").trim(), "patched");
+  assert.match(readState().lastSummary, /fake update ok[\s\S]*fake patch ok/);
+  const ownPgid = execFileSync("ps", ["-o", "pgid=", "-p", String(process.pid)], { encoding: "utf8" }).trim();
+  assert.notEqual(
+    readFileSync(pgidLog, "utf8").trim(),
+    ownPgid,
+    "the update must run in its own process group so quitting Pi cannot kill npm mid-install",
+  );
 
   await sessionStart({ reason: "startup" }, ctx);
   await waitForCommandCount(2);

@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, realpathSync, unlinkSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, realpathSync, unlinkSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -8,6 +8,7 @@ const EXTENSION_NAME = "pi-update";
 const STATE_DIR = join(homedir(), ".pi", "agent", "pi-update");
 const STATE_FILE = join(STATE_DIR, "state.json");
 const LOCK_FILE = join(STATE_DIR, "update.lock");
+const OUTPUT_FILE = join(STATE_DIR, "last-command.log");
 
 /** The Droidworks `pi` patcher next to this extension in the same checkout. */
 export function resolveDefaultPatcher(moduleUrl = import.meta.url) {
@@ -113,20 +114,32 @@ function appendBounded(current, chunk) {
   return next.length > MAX_CAPTURE_BYTES ? next.slice(-MAX_CAPTURE_BYTES) : next;
 }
 
+// The child runs in its own process group with output in a file, so quitting
+// Pi mid-update neither signals it nor breaks its stdout: `pi update` can
+// replace the installed package, and npm killed halfway leaves no `pi` binary.
 function runCommand(command, args, timeoutMs) {
   return new Promise((resolve) => {
     let stdout = "";
     let stderr = "";
     let timedOut = false;
 
+    ensureStateDir();
+    const output = openSync(OUTPUT_FILE, "w");
     const child = spawn(command, args, {
       cwd: homedir(),
+      detached: true,
       env: {
         ...process.env,
         PI_UPDATE_EXTENSION_CHILD: "1",
       },
-      stdio: ["ignore", "pipe", "pipe"],
+      stdio: ["ignore", output, output],
     });
+    closeSync(output);
+    const readOutput = () => {
+      try {
+        stdout = appendBounded("", readFileSync(OUTPUT_FILE, "utf8"));
+      } catch {}
+    };
 
     const timer = setTimeout(() => {
       timedOut = true;
@@ -135,21 +148,15 @@ function runCommand(command, args, timeoutMs) {
     }, timeoutMs);
     timer.unref?.();
 
-    child.stdout?.on("data", (chunk) => {
-      stdout = appendBounded(stdout, chunk.toString("utf8"));
-    });
-
-    child.stderr?.on("data", (chunk) => {
-      stderr = appendBounded(stderr, chunk.toString("utf8"));
-    });
-
     child.on("error", (error) => {
       clearTimeout(timer);
+      readOutput();
       resolve({ code: -1, stdout, stderr: appendBounded(stderr, error.message), timedOut });
     });
 
     child.on("close", (code, signal) => {
       clearTimeout(timer);
+      readOutput();
       resolve({ code: code ?? -1, signal, stdout, stderr, timedOut });
     });
   });

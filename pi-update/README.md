@@ -11,6 +11,7 @@ A Pi extension that runs `pi update --all --no-approve` in the background on eve
 - Starts after a short delay so the TUI can open first.
 - Records the last run in `~/.pi/agent/pi-update/state.json`.
 - Uses a lock file to avoid multiple Pi sessions updating at the same time.
+- Runs the update in its own process group with output in `~/.pi/agent/pi-update/last-command.log`, so quitting Pi mid-update cannot kill npm halfway through replacing Pi.
 - Reapplies the guarded installed-Pi patches (`../pi/scripts/apply-installed-patches.py` in the same checkout) after every successful update. A changed patch target records `patch-failed`, notifies visibly, and retries on the next startup instead of silently losing the patch.
 - Shows footer status while checking and notifies on failures.
 
