@@ -1,8 +1,8 @@
 diff --git a/Sources/GhosttyTerminalView.swift b/Sources/GhosttyTerminalView.swift
-index a603d9c7..42889c92 100644
+index 3458a0a9..6df0b93b 100644
 --- a/Sources/GhosttyTerminalView.swift
 +++ b/Sources/GhosttyTerminalView.swift
-@@ -5712,10 +5712,8 @@ class GhosttyNSView: NSView, NSUserInterfaceValidations {
+@@ -6352,16 +6352,18 @@ class GhosttyNSView: NSView, NSUserInterfaceValidations {
      }
  
      /// Keep the standard Copy shortcut a native no-op when AppKit disables
@@ -13,9 +13,7 @@ index a603d9c7..42889c92 100644
 +    /// Copy in a shell that cannot encode the chord. Kitty-aware applications
 +    /// receive the menu miss through Ghostty's terminal-input path.
      func consumeUnavailableCopyMenuAction(_ event: NSEvent) -> Bool {
-         let normalizedFlags = event.modifierFlags
-             .intersection(.deviceIndependentFlagsMask)
-@@ -5726,7 +5724,11 @@ class GhosttyNSView: NSView, NSUserInterfaceValidations {
+         guard Self.isStandardCopyMenuKeyEquivalent(event) else {
              return false
          }
          guard let surface = ensureSurfaceReadyForInput(),
@@ -28,7 +26,7 @@ index a603d9c7..42889c92 100644
              return false
          }
  
-@@ -5737,6 +5739,13 @@ class GhosttyNSView: NSView, NSUserInterfaceValidations {
+@@ -6372,6 +6374,13 @@ class GhosttyNSView: NSView, NSUserInterfaceValidations {
          )
      }
  
@@ -43,10 +41,10 @@ index a603d9c7..42889c92 100644
          surface: ghostty_surface_t,
          lineCount: Int
 diff --git a/cmuxTests/WindowKeyDownReplayGuardTests.swift b/cmuxTests/WindowKeyDownReplayGuardTests.swift
-index 273df497..430822e4 100644
+index d479b996..00e304ab 100644
 --- a/cmuxTests/WindowKeyDownReplayGuardTests.swift
 +++ b/cmuxTests/WindowKeyDownReplayGuardTests.swift
-@@ -314,6 +314,22 @@ struct WindowKeyDownReplayGuardTests {
+@@ -321,6 +321,22 @@ struct WindowKeyDownReplayGuardTests {
          #expect(responder.keyDownEvents.count == 2)
      }
  

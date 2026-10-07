@@ -25,6 +25,13 @@ bundle_id="dev.droidworks.cmux"
 "$root/materialize.sh"
 repo="$root/repo"
 derived="${CMUX_DROIDWORKS_DERIVED_DATA:-$HOME/Library/Developer/Xcode/DerivedData/cmux-droidworks}"
+# Precompiled modules from a prior pin survive into the next one and fail
+# against changed package headers (Iroh), so a new pin starts from clean.
+if ! cmp -s "$root/upstream.lock" "$derived/upstream.lock"; then
+  rm -rf -- "$derived"
+  mkdir -p "$derived"
+  cp "$root/upstream.lock" "$derived/upstream.lock"
+fi
 
 (
   cd "$repo"

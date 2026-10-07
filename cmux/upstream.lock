@@ -1,4 +1,4 @@
 url=https://github.com/manaflow-ai/cmux.git
-tag=v0.64.25
-commit=b685a275c2e411799857155e37264daf84f7e4d6
-ghostty_commit=4a0e9e185313fd9d09b2f3564a3dfbab444453c0
+tag=v0.65.0
+commit=dda24fbd2250dfacf41bf5e8e3d20d488acf6182
+ghostty_commit=324c0273815ddc383d8d2fbf8d59d590cb65dfdb
