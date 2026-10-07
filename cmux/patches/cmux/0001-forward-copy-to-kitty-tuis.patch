@@ -1,5 +1,5 @@
 diff --git a/Sources/GhosttyTerminalView.swift b/Sources/GhosttyTerminalView.swift
-index 3458a0a9..6df0b93b 100644
+index 3458a0a9..c18483f2 100644
 --- a/Sources/GhosttyTerminalView.swift
 +++ b/Sources/GhosttyTerminalView.swift
 @@ -6352,16 +6352,18 @@ class GhosttyNSView: NSView, NSUserInterfaceValidations {
@@ -26,7 +26,7 @@ index 3458a0a9..6df0b93b 100644
              return false
          }
  
-@@ -6372,6 +6374,13 @@ class GhosttyNSView: NSView, NSUserInterfaceValidations {
+@@ -6372,6 +6374,20 @@ class GhosttyNSView: NSView, NSUserInterfaceValidations {
          )
      }
  
@@ -37,14 +37,38 @@ index 3458a0a9..6df0b93b 100644
 +        !hasCopyableSelection && !usesKittyKeyboardDisambiguation
 +    }
 +
++    static func isCopyMenuItemEnabled(
++        hasCopyableSelection: Bool,
++        usesKittyKeyboardDisambiguation: Bool
++    ) -> Bool {
++        hasCopyableSelection || !usesKittyKeyboardDisambiguation
++    }
++
      private func copyCurrentViewportLinesToClipboard(
          surface: ghostty_surface_t,
          lineCount: Int
+@@ -6706,8 +6722,14 @@ class GhosttyNSView: NSView, NSUserInterfaceValidations {
+             // the runtime still holds a live selection (e.g. under constant
+             // TUI redraw), and a disabled menu item swallows Cmd+C before the
+             // runtime's own copy binding can handle it. Copy with no
+-            // selection is a harmless no-op.
+-            return surface != nil
++            // selection is a harmless no-op, except in a Kitty-aware
++            // application, which receives the menu miss as its own Cmd+C.
++            guard let surface else { return false }
++            return Self.isCopyMenuItemEnabled(
++                hasCopyableSelection: hasCopyableTerminalSelection(surface: surface),
++                usesKittyKeyboardDisambiguation:
++                    ghostty_surface_uses_kitty_keyboard_disambiguation(surface)
++            )
+         case #selector(paste(_:)):
+             return GhosttyApp.terminalPasteboard.hasString(for: GHOSTTY_CLIPBOARD_STANDARD)
+         case #selector(pasteAsPlainText(_:)):
 diff --git a/cmuxTests/WindowKeyDownReplayGuardTests.swift b/cmuxTests/WindowKeyDownReplayGuardTests.swift
-index d479b996..00e304ab 100644
+index d479b996..770a3551 100644
 --- a/cmuxTests/WindowKeyDownReplayGuardTests.swift
 +++ b/cmuxTests/WindowKeyDownReplayGuardTests.swift
-@@ -321,6 +321,22 @@ struct WindowKeyDownReplayGuardTests {
+@@ -321,6 +321,38 @@ struct WindowKeyDownReplayGuardTests {
          #expect(responder.keyDownEvents.count == 2)
      }
  
@@ -60,6 +84,22 @@ index d479b996..00e304ab 100644
 +        ))
 +        #expect(!GhosttyNSView.shouldConsumeUnavailableCopyMenuAction(
 +            hasCopyableSelection: true,
++            usesKittyKeyboardDisambiguation: false
++        ))
++    }
++
++    @Test
++    func copyMenuItemDisablesOnlyForKittyApplicationWithoutSelection() {
++        #expect(!GhosttyNSView.isCopyMenuItemEnabled(
++            hasCopyableSelection: false,
++            usesKittyKeyboardDisambiguation: true
++        ))
++        #expect(GhosttyNSView.isCopyMenuItemEnabled(
++            hasCopyableSelection: true,
++            usesKittyKeyboardDisambiguation: true
++        ))
++        #expect(GhosttyNSView.isCopyMenuItemEnabled(
++            hasCopyableSelection: false,
 +            usesKittyKeyboardDisambiguation: false
 +        ))
 +    }

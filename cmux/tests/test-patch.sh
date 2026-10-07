@@ -30,6 +30,12 @@ attempt = install.split("public func attemptUpdate() {", 1)[1].split("\n    }\n"
 
 assert "ghostty_surface_uses_kitty_keyboard_disambiguation(surface)" in view
 assert "!hasCopyableSelection && !usesKittyKeyboardDisambiguation" in view
+# Edit > Copy must stay disabled for a Kitty TUI without a selection, or the
+# main menu consumes Cmd+C before the menu-miss path can forward it.
+copy_validation = view.split("case #selector(copy(_:)):", 1)[1].split("case #selector(", 1)[0]
+assert "isCopyMenuItemEnabled(" in copy_validation
+assert "hasCopyableSelection || !usesKittyKeyboardDisambiguation" in view
+assert "copyMenuItemDisablesOnlyForKittyApplicationWithoutSelection" in tests
 assert 'environment["CMUX_TAG"]?.lowercased()' in sidebar
 assert ".foregroundStyle(.secondary)" in sidebar
 assert "unavailableCopyPolicyForwardsKittyApplicationKeysOnly" in tests
