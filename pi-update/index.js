@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { closeSync, existsSync, mkdirSync, openSync, readFileSync, realpathSync, unlinkSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { delimiter, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const EXTENSION_NAME = "pi-update";
@@ -122,6 +122,11 @@ function runCommand(command, args, timeoutMs) {
     let stdout = "";
     let stderr = "";
     let timedOut = false;
+    // Maintenance commands must bypass cmux's session shim, which prepends
+    // `-e` before the `update` subcommand and breaks its option parsing.
+    const path = process.env.PATH?.split(delimiter)
+      .filter((entry) => !entry.split(/[\\/]/).includes("cmux-cli-shims"))
+      .join(delimiter);
 
     ensureStateDir();
     const output = openSync(OUTPUT_FILE, "w");
@@ -130,6 +135,7 @@ function runCommand(command, args, timeoutMs) {
       detached: true,
       env: {
         ...process.env,
+        ...(path ? { PATH: path } : {}),
         PI_UPDATE_EXTENSION_CHILD: "1",
       },
       stdio: ["ignore", output, output],

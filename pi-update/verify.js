@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { chmodSync, mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const tempHome = mkdtempSync(join(tmpdir(), "pi-update-verify-"));
@@ -11,7 +11,10 @@ const lockFile = join(tempHome, ".pi", "agent", "pi-update", "update.lock");
 const commandLog = join(tempHome, "commands.log");
 const patchLog = join(tempHome, "patches.log");
 const pgidLog = join(tempHome, "pgid.log");
-const fakePi = join(tempHome, "fake-pi");
+const shimDir = join(tempHome, "cmux-cli-shims", "surface");
+const binDir = join(tempHome, "bin");
+const fakePi = join(binDir, "pi");
+const fakeShim = join(shimDir, "pi");
 const fakePatcher = join(tempHome, "fake-patcher");
 
 function readState() {
@@ -41,6 +44,10 @@ async function waitForCommandCount(expected, timeoutMs = 3000) {
 }
 
 try {
+  mkdirSync(shimDir, { recursive: true });
+  mkdirSync(binDir, { recursive: true });
+  writeFileSync(fakeShim, "#!/bin/sh\nprintf 'Error: Unknown option: --all\\n' >&2\nexit 1\n", "utf8");
+  chmodSync(fakeShim, 0o755);
   writeFileSync(
     fakePi,
     `#!/bin/sh\nprintf '%s\\n' "$*" >> "${commandLog}"\nps -o pgid= -p $$ > "${pgidLog}"\nprintf 'fake update ok\\n'\n`,
@@ -55,7 +62,8 @@ try {
   chmodSync(fakePatcher, 0o755);
 
   process.env.HOME = tempHome;
-  process.env.PI_UPDATE_COMMAND = fakePi;
+  process.env.PATH = [shimDir, binDir, process.env.PATH].filter(Boolean).join(delimiter);
+  delete process.env.PI_UPDATE_COMMAND;
   process.env.PI_UPDATE_PATCHER = fakePatcher;
   process.env.PI_UPDATE_START_DELAY_MS = "0";
   process.env.PI_UPDATE_TIMEOUT_MS = "3000";

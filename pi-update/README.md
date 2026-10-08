@@ -17,6 +17,10 @@ A Pi extension that runs `pi update --all --no-approve` in the background on eve
 
 Pi's built-in package-update check runs concurrently. Its banner can appear before the background update finishes and is not removed afterward. Use `/pi-update status` to confirm completion; restart Pi to load newly installed package code.
 
+## Known limitation
+
+A Pi version update replaces the installed runtime while the current process remains open. If that process later loads a bundle chunk whose hashed filename changed, the request can fail with `Cannot find module .../dist/bundle/chunks/...`. Start a new Pi session; the saved session remains intact. This is an accepted tradeoff of automatic in-session updates.
+
 ## Install
 
 Link the directory into Pi's extensions from a Droidworks checkout:
