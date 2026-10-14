@@ -197,6 +197,45 @@ BUNDLE_JSON_OLD = 'selectedBg:ColorValueSchema,searchMatchBg:typebox_exports.Opt
 BUNDLE_JSON_NEW = 'selectedBg:ColorValueSchema,fullscreenSelectionColor:typebox_exports.Optional(ColorValueSchema),fullscreenSelectionTextColor:typebox_exports.Optional(ColorValueSchema),searchMatchBg:typebox_exports.Optional(ColorValueSchema)'
 
 
+# Pi 1.2 derives fallbacks, background slots, schema, and types from one THEME_TOKENS registry.
+TOKENS_OLD = '''    searchMatchText: {
+        slot: "foreground",
+        description: "Transcript search match text and current-match background (falls back to text when omitted)",
+        fallback: "text",
+    },
+'''
+TOKENS_NEW = TOKENS_OLD + '''    fullscreenSelectionColor: {
+        slot: "background",
+        description: "Fullscreen transcript selection background (falls back to selectedBg when omitted)",
+        fallback: "selectedBg",
+    },
+    fullscreenSelectionTextColor: {
+        slot: "foreground",
+        description: "Fullscreen transcript selection text (falls back to text when omitted)",
+        fallback: "text",
+    },
+'''
+TOKENS_DTS_OLD = '''    readonly searchMatchText: {
+        readonly slot: "foreground";
+        readonly description: "Transcript search match text and current-match background (falls back to text when omitted)";
+        readonly fallback: "text";
+    };
+'''
+TOKENS_DTS_NEW = TOKENS_DTS_OLD + '''    readonly fullscreenSelectionColor: {
+        readonly slot: "background";
+        readonly description: "Fullscreen transcript selection background (falls back to selectedBg when omitted)";
+        readonly fallback: "selectedBg";
+    };
+    readonly fullscreenSelectionTextColor: {
+        readonly slot: "foreground";
+        readonly description: "Fullscreen transcript selection text (falls back to text when omitted)";
+        readonly fallback: "text";
+    };
+'''
+BUNDLE_TOKENS_OLD = 'searchMatchText:{slot:"foreground",description:"Transcript search match text and current-match background (falls back to text when omitted)",fallback:"text"},'
+BUNDLE_TOKENS_NEW = BUNDLE_TOKENS_OLD + 'fullscreenSelectionColor:{slot:"background",description:"Fullscreen transcript selection background (falls back to selectedBg when omitted)",fallback:"selectedBg"},fullscreenSelectionTextColor:{slot:"foreground",description:"Fullscreen transcript selection text (falls back to text when omitted)",fallback:"text"},'
+
+
 def fail(message: str) -> "None":
     raise SystemExit(f"✗ {message}")
 
@@ -291,24 +330,34 @@ def main() -> int:
         one(declaration, (DTS_OPTION_OLD,), DTS_OPTION_NEW, "pi-tui selection option declaration"),
         one(declaration, (DTS_FIELD_OLD,), DTS_FIELD_NEW, "pi-tui selection field declaration"),
         one(renderer, (RENDERER_OLD, RENDERER_PREVIOUS), RENDERER_NEW, "coding-agent theme wiring"),
-        one(theme, (THEME_FALLBACK_OLD,), THEME_FALLBACK_NEW, "theme selection fallbacks"),
-        ([theme], [((THEME_BG_KEYS_OLD,), THEME_BG_KEYS_NEW), ((THEME_BG_KEYS_V099_OLD,), THEME_BG_KEYS_V099_NEW)], "theme selection background"),
-        one(theme_json, (THEME_JSON_OLD,), THEME_JSON_NEW, "theme selection roles"),
-        one(theme_dts, (THEME_TYPES_FG_OLD,), THEME_TYPES_FG_NEW, "theme foreground type"),
-        one(theme_dts, (THEME_TYPES_BG_OLD,), THEME_TYPES_BG_NEW, "theme background type"),
-        one(theme_dts, (THEME_TYPES_OPTIONAL_FG_OLD,), THEME_TYPES_OPTIONAL_FG_NEW, "optional theme foreground type"),
-        one(theme_dts, (THEME_TYPES_OPTIONAL_BG_OLD,), THEME_TYPES_OPTIONAL_BG_NEW, "optional theme background type"),
-        one(package_dir / "dist/modes/interactive/theme/theme-json.d.ts", (THEME_JSON_TYPES_OLD,), THEME_JSON_TYPES_NEW, "theme JSON types"),
-        one(package_dir / "dist/modes/interactive/theme/theme-schema.json", (THEME_SCHEMA_OLD,), THEME_SCHEMA_NEW, "theme JSON schema"),
         # The bundler may place each target in a different chunk; each must be in exactly one.
         (chunks, [((BUNDLE_FIELDS_OLD,), BUNDLE_FIELDS_NEW)], "bundled selection field"),
         (chunks, [((BUNDLE_CONSTRUCTOR_OLD,), BUNDLE_CONSTRUCTOR_NEW)], "bundled selection option"),
         (chunks, [((BUNDLE_HIGHLIGHT_ORIGINAL, BUNDLE_HIGHLIGHT_ORIGINAL_V099, BUNDLE_HIGHLIGHT_HARDCODED), BUNDLE_HIGHLIGHT_NEW)], "bundled selection renderer"),
         (chunks, [((BUNDLE_RENDERER_OLD, BUNDLE_RENDERER_PREVIOUS), BUNDLE_RENDERER_NEW)], "bundled theme wiring"),
-        (chunks, [((BUNDLE_FALLBACK_OLD,), BUNDLE_FALLBACK_NEW)], "bundled selection fallbacks"),
-        (chunks, [((BUNDLE_BG_KEYS_OLD,), BUNDLE_BG_KEYS_NEW), ((BUNDLE_BG_KEYS_V099_OLD,), BUNDLE_BG_KEYS_V099_NEW)], "bundled selection background"),
-        (chunks, [((BUNDLE_JSON_OLD,), BUNDLE_JSON_NEW)], "bundled selection roles"),
     ]
+    tokens = package_dir / "dist/modes/interactive/theme/theme-tokens.js"
+    if tokens.is_file():
+        changes += [
+            one(tokens, (TOKENS_OLD,), TOKENS_NEW, "theme selection tokens"),
+            one(package_dir / "dist/modes/interactive/theme/theme-tokens.d.ts", (TOKENS_DTS_OLD,), TOKENS_DTS_NEW, "theme selection token types"),
+            (chunks, [((BUNDLE_TOKENS_OLD,), BUNDLE_TOKENS_NEW)], "bundled selection tokens"),
+        ]
+    else:
+        changes += [
+            one(theme, (THEME_FALLBACK_OLD,), THEME_FALLBACK_NEW, "theme selection fallbacks"),
+            ([theme], [((THEME_BG_KEYS_OLD,), THEME_BG_KEYS_NEW), ((THEME_BG_KEYS_V099_OLD,), THEME_BG_KEYS_V099_NEW)], "theme selection background"),
+            one(theme_json, (THEME_JSON_OLD,), THEME_JSON_NEW, "theme selection roles"),
+            one(theme_dts, (THEME_TYPES_FG_OLD,), THEME_TYPES_FG_NEW, "theme foreground type"),
+            one(theme_dts, (THEME_TYPES_BG_OLD,), THEME_TYPES_BG_NEW, "theme background type"),
+            one(theme_dts, (THEME_TYPES_OPTIONAL_FG_OLD,), THEME_TYPES_OPTIONAL_FG_NEW, "optional theme foreground type"),
+            one(theme_dts, (THEME_TYPES_OPTIONAL_BG_OLD,), THEME_TYPES_OPTIONAL_BG_NEW, "optional theme background type"),
+            one(package_dir / "dist/modes/interactive/theme/theme-json.d.ts", (THEME_JSON_TYPES_OLD,), THEME_JSON_TYPES_NEW, "theme JSON types"),
+            one(package_dir / "dist/modes/interactive/theme/theme-schema.json", (THEME_SCHEMA_OLD,), THEME_SCHEMA_NEW, "theme JSON schema"),
+            (chunks, [((BUNDLE_FALLBACK_OLD,), BUNDLE_FALLBACK_NEW)], "bundled selection fallbacks"),
+            (chunks, [((BUNDLE_BG_KEYS_OLD,), BUNDLE_BG_KEYS_NEW), ((BUNDLE_BG_KEYS_V099_OLD,), BUNDLE_BG_KEYS_V099_NEW)], "bundled selection background"),
+            (chunks, [((BUNDLE_JSON_OLD,), BUNDLE_JSON_NEW)], "bundled selection roles"),
+        ]
     targets = [(resolve_target(paths, variants, label), label) for paths, variants, label in changes]
     statuses = [replace_alternative(path, originals, patched, args.check, label) for (path, originals, patched), label in targets]
     action = "verified" if args.check else ("applied" if "applied" in statuses else "already applied")

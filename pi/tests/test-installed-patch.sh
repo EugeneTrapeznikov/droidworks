@@ -107,6 +107,48 @@ PI_CODING_AGENT_PACKAGE_DIR="$V099" "$PATCHER" | grep -q 'already applied'
 grep -q 'BACKGROUND_TOKENS=new Set(\["selectedBg","fullscreenSelectionColor","searchMatchBg"' "$V099/dist/bundle/chunks/chunk-tui.js"
 grep -q '"fullscreenSelectionColor",' "$V099/dist/modes/interactive/theme/theme.js"
 
+# Pi 1.2 layout: one THEME_TOKENS registry replaces the per-file fallbacks, background keys, schema, and types.
+V120="$TMP/v120"
+cp -R "$PKG" "$V120"
+python3 -B - "$PATCHER" "$V120" <<'PY'
+import importlib.util
+import json
+from pathlib import Path
+import shutil
+import sys
+
+spec = importlib.util.spec_from_file_location("pi_patcher", sys.argv[1])
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+package = Path(sys.argv[2])
+(package / "package.json").write_text(json.dumps({"version": "99.1.2", "type": "module"}))
+chunks = package / "dist/bundle/chunks"
+(chunks / "chunk-fixture.js").unlink()
+(chunks / "chunk-tui.js").write_text(
+    "class TuiAltScreen{" + module.BUNDLE_FIELDS_OLD
+    + "constructor(options={}){" + module.BUNDLE_CONSTRUCTOR_OLD + "}"
+    + module.BUNDLE_HIGHLIGHT_ORIGINAL_V099 + "}\n"
+    + "var THEME_TOKENS={" + module.BUNDLE_TOKENS_OLD + "};\n"
+)
+(chunks / "chunk-app.js").write_text(
+    "function createInteractiveTui(terminal,options,theme){"
+    + module.BUNDLE_RENDERER_OLD + "(text)}}\n"
+)
+theme = package / "dist/modes/interactive/theme"
+shutil.rmtree(theme)
+theme.mkdir()
+(theme / "theme-tokens.js").write_text("export const THEME_TOKENS = {\n" + module.TOKENS_OLD + "};\n")
+(theme / "theme-tokens.d.ts").write_text("export declare const THEME_TOKENS: {\n" + module.TOKENS_DTS_OLD + "};\n")
+PY
+PI_CODING_AGENT_PACKAGE_DIR="$V120" "$PATCHER" | grep -q 'chunk-app.js, .*chunk-tui.js'
+PI_CODING_AGENT_PACKAGE_DIR="$V120" "$PATCHER" --check >/dev/null
+PI_CODING_AGENT_PACKAGE_DIR="$V120" "$PATCHER" | grep -q 'already applied'
+grep -q 'fullscreenSelectionColor:{slot:"background",.*fallback:"selectedBg"}' "$V120/dist/bundle/chunks/chunk-tui.js"
+node --input-type=module -e '
+const { THEME_TOKENS } = await import(process.argv[1]);
+if (THEME_TOKENS.fullscreenSelectionColor.fallback !== "selectedBg" || THEME_TOKENS.fullscreenSelectionTextColor.slot !== "foreground") process.exit(1);
+' "$V120/dist/modes/interactive/theme/theme-tokens.js"
+
 PI_CODING_AGENT_PACKAGE_DIR="$PKG" "$PATCHER"
 PI_CODING_AGENT_PACKAGE_DIR="$PKG" "$PATCHER" --check
 PI_CODING_AGENT_PACKAGE_DIR="$PKG" "$PATCHER" | grep -q 'already applied'
