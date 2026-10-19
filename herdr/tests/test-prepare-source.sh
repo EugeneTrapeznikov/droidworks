@@ -10,13 +10,15 @@ rmdir "$SOURCE_DIR"
 
 output=$(HERDR_SOURCE_DIR="$SOURCE_DIR" "$TOOL_DIR/scripts/prepare-source.sh")
 
-[[ "$output" == "prepared Herdr $HERDR_VERSION + 2 downstream patches at $SOURCE_DIR" ]]
+patch_count=$(set -- $HERDR_PATCHES; echo $#)
+[[ "$output" == "prepared Herdr $HERDR_VERSION + $patch_count downstream patches at $SOURCE_DIR" ]]
 [[ $(git -C "$SOURCE_DIR" rev-parse HEAD) == "$HERDR_BASE_COMMIT" ]]
 [[ $(git -C "$SOURCE_DIR" describe --tags --exact-match HEAD) == "$HERDR_TAG" ]]
 expected_status=$(for entry in $HERDR_PATCHED_BLOBS; do printf ' M %s\n' "${entry%%=*}"; done | sort)
 [[ $(git -C "$SOURCE_DIR" status --porcelain=v1 --untracked-files=all | sort) == "$expected_status" ]]
 git -C "$SOURCE_DIR" diff --check
 grep -Fq 'None => return b"\x07".to_vec(),' "$SOURCE_DIR/src/terminal_notify.rs"
+grep -Fq 'pub(super) struct FocusRearm' "$SOURCE_DIR/src/client/timer.rs"
 
 # A prepared tree is accepted again.
 HERDR_SOURCE_DIR="$SOURCE_DIR" "$TOOL_DIR/scripts/prepare-source.sh" >/dev/null

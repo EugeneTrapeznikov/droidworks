@@ -1,12 +1,13 @@
 # Herdr Droidworks
 
-A pinned [Herdr](https://github.com/herdrdev/herdr) build with two small patches for agents running on a remote machine and attached over Mosh or SSH.
+A pinned [Herdr](https://github.com/herdrdev/herdr) build with three small patches for agents running on a remote machine and attached over Mosh or SSH.
 
 The source is pinned to stable Herdr `v0.9.5` at `2ecf19a92fc3a7fff75b6ce3655ef04f4625ec01`. `scripts/prepare-source.sh` verifies the tag, each patch checksum, and the resulting source blobs before anything builds.
 
 ## Behavior
 
 - **Agent notifications reach any terminal.** With `[ui.toast] delivery = "terminal"`, Herdr sends a desktop notification escape (OSC 9 or OSC 99) only to Ghostty, iTerm2, WezTerm, and kitty. Anywhere else it sent nothing, and Mosh drops OSC notifications even for those terminals. This build writes a terminal bell instead, so "agent finished" and "agent needs input" reach the laptop through Mosh for every agent Herdr detects. Herdr's own rule still applies: no notification for the tab you are looking at while the terminal is focused.
+- **Focus tracking recovers.** Herdr suppresses a notification for the tab you are looking at only while the terminal reports focus. Orca can silently stop reporting focus, and Mosh never forwards Herdr's plain re-enable, so Herdr kept believing you were watching and stayed silent. When no known terminal is detected, this build toggles focus reporting off and on every 10 seconds, in separate Mosh frames; the terminal answers with its current focus.
 - **Finished tabs are marked.** An unfocused tab whose status is `Done` shows a trailing accent-blue `●`; focusing it clears the mark.
 
 Recommended `~/.config/herdr/config.toml` on the remote machine:

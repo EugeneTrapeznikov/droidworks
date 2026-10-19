@@ -1,0 +1,126 @@
+diff --git a/src/client/mod.rs b/src/client/mod.rs
+index f55db195..27e1f8e0 100644
+--- a/src/client/mod.rs
++++ b/src/client/mod.rs
+@@ -673,6 +673,11 @@ async fn run_client_loop(
+ 
+     // Main event loop.
+     let mut client_timer = timer::ClientLoopTimer::new();
++    // ponytail: unknown hosts only, one redraw per period while focused; a host
++    // capability probe can replace the heuristic.
++    let mut focus_rearm = crate::terminal_notify::detect_backend()
++        .is_none()
++        .then(|| timer::FocusRearm::new(std::time::Instant::now()));
+     #[cfg(windows)]
+     let mut stdin_open = true;
+     while !should_quit.load(Ordering::Acquire) {
+@@ -788,6 +793,9 @@ async fn run_client_loop(
+             .map_or(Duration::from_millis(100), |shell| {
+                 shell.timer_delay(std::time::Instant::now())
+             });
++        let timer_delay = focus_rearm.as_ref().map_or(timer_delay, |rearm| {
++            timer_delay.min(rearm.delay(std::time::Instant::now()))
++        });
+         let timer_deadline = client_timer.deadline(std::time::Instant::now(), timer_delay);
+         let immediate_event = scheduled_activation.take();
+         #[cfg(windows)]
+@@ -822,6 +830,12 @@ async fn run_client_loop(
+         if let Some(shell) = state.shell.as_mut() {
+             shell.tick_popup_pending(now);
+         }
++        if let Some(sequence) = focus_rearm.as_mut().and_then(|rearm| rearm.poll(now)) {
++            let mut stdout = io::stdout().lock();
++            if let Err(err) = stdout.write_all(sequence).and_then(|()| stdout.flush()) {
++                warn!(err = %err, "failed to re-arm host focus reporting");
++            }
++        }
+ 
+         match event {
+             ClientLoopEvent::EndpointCatalog(reload) => pending_catalog = Some(reload),
+diff --git a/src/client/timer.rs b/src/client/timer.rs
+index bd5c249a..3cc24612 100644
+--- a/src/client/timer.rs
++++ b/src/client/timer.rs
+@@ -23,6 +23,54 @@ impl ClientLoopTimer {
+     }
+ }
+ 
++// Periodically re-arms host focus reporting (mode 1004).
++//
++// Some hosts (Orca) silently drop focus reporting, and a plain `?1004h` re-assert
++// never reaches them through Mosh: Mosh forwards a mode only when its own copy
++// changes. Disabling and re-enabling in separate Mosh frames forwards both, and
++// the host answers the enable with its current focus state.
++
++const FOCUS_REARM_PERIOD: Duration = Duration::from_secs(10);
++// Longer than Mosh's maximum frame interval, so the two writes land in separate frames.
++const FOCUS_REARM_GAP: Duration = Duration::from_millis(500);
++
++pub(super) struct FocusRearm {
++    next: Instant,
++    disabled: bool,
++}
++
++impl FocusRearm {
++    pub(super) fn new(now: Instant) -> Self {
++        Self {
++            next: now + FOCUS_REARM_PERIOD,
++            disabled: false,
++        }
++    }
++
++    /// Bytes to write to the host when the next step is due.
++    pub(super) fn poll(&mut self, now: Instant) -> Option<&'static [u8]> {
++        if now < self.next {
++            return None;
++        }
++        self.disabled = !self.disabled;
++        self.next = now
++            + if self.disabled {
++                FOCUS_REARM_GAP
++            } else {
++                FOCUS_REARM_PERIOD
++            };
++        Some(if self.disabled {
++            b"\x1b[?1004l"
++        } else {
++            b"\x1b[?1004h"
++        })
++    }
++
++    pub(super) fn delay(&self, now: Instant) -> Duration {
++        self.next.saturating_duration_since(now)
++    }
++}
++
+ #[cfg(test)]
+ mod tests {
+     use super::*;
+@@ -75,4 +123,27 @@ mod tests {
+             start + Duration::from_millis(30)
+         );
+     }
++
++    #[test]
++    fn disables_then_re_enables_in_separate_steps() {
++        let start = Instant::now();
++        let mut rearm = FocusRearm::new(start);
++
++        assert_eq!(rearm.poll(start), None);
++        assert_eq!(rearm.delay(start), FOCUS_REARM_PERIOD);
++        assert_eq!(
++            rearm.poll(start + FOCUS_REARM_PERIOD),
++            Some(&b"\x1b[?1004l"[..])
++        );
++        assert_eq!(rearm.poll(start + FOCUS_REARM_PERIOD), None);
++        assert_eq!(rearm.delay(start + FOCUS_REARM_PERIOD), FOCUS_REARM_GAP);
++        assert_eq!(
++            rearm.poll(start + FOCUS_REARM_PERIOD + FOCUS_REARM_GAP),
++            Some(&b"\x1b[?1004h"[..])
++        );
++        assert_eq!(
++            rearm.delay(start + FOCUS_REARM_PERIOD + FOCUS_REARM_GAP),
++            FOCUS_REARM_PERIOD
++        );
++    }
+ }
