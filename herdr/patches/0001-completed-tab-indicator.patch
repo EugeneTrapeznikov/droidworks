@@ -1,0 +1,223 @@
+diff --git a/src/client/shell/tabs.rs b/src/client/shell/tabs.rs
+index 3fdcf7dc..4db2c1a9 100644
+--- a/src/client/shell/tabs.rs
++++ b/src/client/shell/tabs.rs
+@@ -1,6 +1,8 @@
+ use super::*;
+ 
+ const TAB_SCROLL_BUTTON_WIDTH: u16 = 3;
++const TAB_COMPLETION_DOT: &str = "●";
++const TAB_COMPLETION_INDICATOR_WIDTH: u16 = 2;
+ const MIN_TAB_STRIP_WIDTH: u16 =
+     MIN_TAB_WIDTH + NEW_TAB_WIDTH + TAB_SCROLL_BUTTON_WIDTH.saturating_mul(2);
+ 
+@@ -25,7 +27,14 @@ pub(crate) fn render_tab_bar(
+         .iter()
+         .map(|tab| {
+             let label = tab_label(tab);
+-            display_width(&label).saturating_add(4).max(MIN_TAB_WIDTH)
++            display_width(&label)
++                .saturating_add(if tab_has_completion_dot(tab) {
++                    TAB_COMPLETION_INDICATOR_WIDTH
++                } else {
++                    0
++                })
++                .saturating_add(4)
++                .max(MIN_TAB_WIDTH)
+         })
+         .collect::<Vec<_>>();
+     let content = tab_bar_content_area(snapshot, area);
+@@ -114,15 +123,49 @@ pub(crate) fn render_tab_bar(
+         } else {
+             Style::default().fg(palette.overlay0).bg(palette.surface0)
+         };
+-        let padding = width.saturating_sub(display_width(&name));
++        let completion_dot = tab_has_completion_dot(tab);
++        let name_width = display_width(&name);
++        let content_width = name_width.saturating_add(if completion_dot {
++            TAB_COMPLETION_INDICATOR_WIDTH
++        } else {
++            0
++        });
++        let padding = width.saturating_sub(content_width);
+         let left = padding / 2;
+-        let text = format!(
+-            "{empty:left$}{name}{empty:right_padding$}",
+-            empty = "",
+-            left = left as usize,
+-            right_padding = padding.saturating_sub(left) as usize,
+-        );
++        let right = padding.saturating_sub(left);
++        let text = if completion_dot {
++            format!(
++                "{empty:left$}{name} {TAB_COMPLETION_DOT}{empty:right$}",
++                empty = "",
++                left = left as usize,
++                right = right as usize,
++            )
++        } else {
++            format!(
++                "{empty:left$}{name}{empty:right$}",
++                empty = "",
++                left = left as usize,
++                right = right as usize,
++            )
++        };
+         put_text(buffer, rect.x, rect.y, rect.width, &text, style);
++        if completion_dot {
++            let dot_x = rect
++                .x
++                .saturating_add(left)
++                .saturating_add(name_width)
++                .saturating_add(1);
++            if dot_x < rect.right() {
++                put_text(
++                    buffer,
++                    dot_x,
++                    rect.y,
++                    1,
++                    TAB_COMPLETION_DOT,
++                    Style::default().fg(palette.accent).bg(palette.surface0),
++                );
++            }
++        }
+         hits.tabs.push((rect, tab.tab_id.clone()));
+         first_visible.get_or_insert(index);
+         last_visible = Some(index);
+@@ -371,6 +414,10 @@ fn max_tab_scroll(widths: &[u16], available: u16) -> usize {
+     start
+ }
+ 
++fn tab_has_completion_dot(tab: &ClientShellTab) -> bool {
++    !tab.focused && tab.agent_status == crate::api::schema::AgentStatus::Done
++}
++
+ fn tab_label(tab: &ClientShellTab) -> String {
+     if tab.zoomed {
+         format!("{} Z", tab.label)
+diff --git a/src/client/shell/tests/chrome_context.rs b/src/client/shell/tests/chrome_context.rs
+index 1ef98798..4034b074 100644
+--- a/src/client/shell/tests/chrome_context.rs
++++ b/src/client/shell/tests/chrome_context.rs
+@@ -1,5 +1,121 @@
+ use super::*;
+ 
++#[test]
++fn only_unfocused_done_tabs_render_an_accent_completion_dot() {
++    let mut snapshot = snapshot();
++    snapshot.tabs[0].agent_status = AgentStatus::Done;
++    snapshot.tabs.push(ClientShellTab {
++        tab_id: "tab_2".into(),
++        workspace_id: "ws_1".into(),
++        number: 2,
++        label: "completed".into(),
++        custom_label: true,
++        zoomed: false,
++        focused: false,
++        agent_status: AgentStatus::Done,
++    });
++    snapshot.tabs.extend(
++        [
++            AgentStatus::Idle,
++            AgentStatus::Working,
++            AgentStatus::Blocked,
++            AgentStatus::Unknown,
++        ]
++        .into_iter()
++        .enumerate()
++        .map(|(index, agent_status)| ClientShellTab {
++            tab_id: format!("tab_{}", index + 3),
++            workspace_id: "ws_1".into(),
++            number: index + 3,
++            label: format!("other-{}", index + 3),
++            custom_label: true,
++            zoomed: false,
++            focused: false,
++            agent_status,
++        }),
++    );
++    let mut state = ClientShellState::new(ClientShellConfig::from_config(&Config::default()));
++    state.set_snapshot(Box::new(snapshot));
++    state.set_pane_surface(surface());
++
++    let frame = state.compose(106, 20).expect("completion tab frame");
++    let buffer = frame.to_ratatui_buffer().expect("frame should reconstruct");
++    let focused = state
++        .hits
++        .tabs
++        .iter()
++        .find(|(_, tab_id)| tab_id == "tab_1")
++        .expect("focused tab")
++        .0;
++    let completed = state
++        .hits
++        .tabs
++        .iter()
++        .find(|(_, tab_id)| tab_id == "tab_2")
++        .expect("completed tab")
++        .0;
++    let focused_dots = (focused.x..focused.right())
++        .filter(|x| buffer[(*x, focused.y)].symbol() == "●")
++        .count();
++    let completed_dots = (completed.x..completed.right())
++        .filter(|x| buffer[(*x, completed.y)].symbol() == "●")
++        .collect::<Vec<_>>();
++
++    assert_eq!(focused_dots, 0);
++    assert_eq!(completed_dots.len(), 1);
++    assert_eq!(
++        buffer[(completed_dots[0], completed.y)].fg,
++        state.config.palette.accent
++    );
++    for tab_id in ["tab_3", "tab_4", "tab_5", "tab_6"] {
++        let rect = state
++            .hits
++            .tabs
++            .iter()
++            .find(|(_, candidate)| candidate == tab_id)
++            .expect("non-completed tab")
++            .0;
++        assert!((rect.x..rect.right()).all(|x| buffer[(x, rect.y)].symbol() != "●"));
++    }
++}
++
++#[test]
++fn completion_dot_width_triggers_tab_overflow() {
++    let mut snapshot = snapshot();
++    snapshot.tabs[0].label = "same".into();
++    snapshot.tabs[0].custom_label = true;
++    snapshot.tabs.push(ClientShellTab {
++        tab_id: "tab_2".into(),
++        workspace_id: "ws_1".into(),
++        number: 2,
++        label: "same".into(),
++        custom_label: true,
++        zoomed: false,
++        focused: false,
++        agent_status: AgentStatus::Done,
++    });
++    let config = ClientShellConfig::from_config(&Config::default());
++    assert!(config.mouse_capture);
++    let area = Rect::new(0, 0, 21, 1);
++    let mut buffer = Buffer::empty(area);
++    let mut tab_scroll = 0;
++    let mut reveal_focused_tab = false;
++    let mut hits = ShellHitMap::default();
++
++    render::render_tab_bar(
++        &mut buffer,
++        area,
++        &snapshot,
++        &config,
++        &mut tab_scroll,
++        &mut reveal_focused_tab,
++        None,
++        &mut hits,
++    );
++
++    assert!(hits.tab_scroll_right.width > 0);
++}
++
+ #[test]
+ fn tab_overflow_controls_scroll_the_client_owned_tab_bar() {
+     let mut snapshot = snapshot();

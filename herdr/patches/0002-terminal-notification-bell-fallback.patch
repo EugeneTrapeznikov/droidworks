@@ -1,0 +1,89 @@
+diff --git a/src/terminal_notify.rs b/src/terminal_notify.rs
+index e6380c7b..2d305471 100644
+--- a/src/terminal_notify.rs
++++ b/src/terminal_notify.rs
+@@ -32,27 +32,41 @@ pub fn detect_backend() -> Option<TerminalNotificationBackend> {
+ }
+ 
+ pub fn show_notification(title: &str, body: Option<&str>) -> io::Result<bool> {
+-    let Some(backend) = detect_backend() else {
+-        return Ok(false);
+-    };
++    let sequence = build_notification(
++        detect_backend(),
++        std::env::var_os("TMUX").is_some(),
++        title,
++        body,
++    );
++
++    let mut stdout = io::stdout();
++    stdout.write_all(&sequence)?;
++    stdout.flush()?;
++    Ok(true)
++}
+ 
++fn build_notification(
++    backend: Option<TerminalNotificationBackend>,
++    in_tmux: bool,
++    title: &str,
++    body: Option<&str>,
++) -> Vec<u8> {
+     let sequence = match backend {
+-        TerminalNotificationBackend::Ghostty
+-        | TerminalNotificationBackend::Iterm2
+-        | TerminalNotificationBackend::WezTerm => build_osc9_notification(title, body),
+-        TerminalNotificationBackend::Kitty => build_osc99_notification(title, body),
++        Some(
++            TerminalNotificationBackend::Ghostty
++            | TerminalNotificationBackend::Iterm2
++            | TerminalNotificationBackend::WezTerm,
++        ) => build_osc9_notification(title, body),
++        Some(TerminalNotificationBackend::Kitty) => build_osc99_notification(title, body),
++        // Unknown terminals and Mosh drop OSC notifications; BEL reaches them all.
++        None => return b"\x07".to_vec(),
+     };
+ 
+-    let sequence = if std::env::var_os("TMUX").is_some() {
++    if in_tmux {
+         wrap_tmux_passthrough(&sequence)
+     } else {
+         sequence
+-    };
+-
+-    let mut stdout = io::stdout();
+-    stdout.write_all(&sequence)?;
+-    stdout.flush()?;
+-    Ok(true)
++    }
+ }
+ 
+ pub fn split_message(message: &str) -> (&str, Option<&str>) {
+@@ -135,6 +149,28 @@ mod tests {
+         assert!(sequence.contains("]99;i=1:p=body;ws · 1"));
+     }
+ 
++    #[test]
++    fn unknown_terminal_notification_falls_back_to_bell() {
++        assert_eq!(
++            build_notification(None, false, "pi finished", None),
++            b"\x07"
++        );
++        assert_eq!(build_notification(None, true, "pi finished", None), b"\x07");
++    }
++
++    #[test]
++    fn known_terminal_notification_keeps_osc() {
++        assert_eq!(
++            build_notification(
++                Some(TerminalNotificationBackend::Ghostty),
++                false,
++                "pi finished",
++                None
++            ),
++            b"\x1b]9;pi finished\x1b\\"
++        );
++    }
++
+     #[test]
+     fn tmux_passthrough_wraps_and_escapes() {
+         let wrapped = wrap_tmux_passthrough(b"\x1b]9;hi\x1b\\");
