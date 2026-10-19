@@ -18,7 +18,7 @@ expected_status=$(for entry in $HERDR_PATCHED_BLOBS; do printf ' M %s\n' "${entr
 [[ $(git -C "$SOURCE_DIR" status --porcelain=v1 --untracked-files=all | sort) == "$expected_status" ]]
 git -C "$SOURCE_DIR" diff --check
 grep -Fq 'None => return b"\x07".to_vec(),' "$SOURCE_DIR/src/terminal_notify.rs"
-grep -Fq 'pub(super) struct FocusRearm' "$SOURCE_DIR/src/client/timer.rs"
+grep -Fq 'A completion on the tab in view is marked seen' "$SOURCE_DIR/src/client/shell/notification_policy.rs"
 
 # A prepared tree is accepted again.
 HERDR_SOURCE_DIR="$SOURCE_DIR" "$TOOL_DIR/scripts/prepare-source.sh" >/dev/null
