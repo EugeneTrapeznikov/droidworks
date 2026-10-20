@@ -19,6 +19,7 @@ Focused on making coding agents better at real software work: sharper tools, les
 
 - [`cmux`](cmux/) - Stable-pinned cmux build that forwards ⌘C to Kitty-aware fullscreen TUIs.
 - [`herdr`](herdr/) - Pinned Herdr build whose agent notifications reach the laptop over Mosh, plus a mark on finished tabs.
+- [`mosh`](mosh/) - Mosh client that keeps ⌘C reaching Herdr and other remote TUIs, even after the laptop terminal resets its keyboard mode.
 - [`pi`](pi/) - Local Pi customization with theme-aware fullscreen selection and version-guarded patching.
 - [`pi-footer-nerdfonts`](pi-footer-nerdfonts/) - Replaces Pi footer emojis with consistent Nerd Font glyphs.
 - [`pi-jev-triage`](pi-jev-triage/) - Tool-result triage for Pi: a Jev decision model hides the parts of big tool results the agent won't need, freeing up to 10% of context in long sessions with no drop in SWE-bench tasks solved.

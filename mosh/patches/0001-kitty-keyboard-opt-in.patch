@@ -1,0 +1,98 @@
+diff --git a/src/terminal/terminaldisplay.cc b/src/terminal/terminaldisplay.cc
+index e7595c2..dba4453 100644
+--- a/src/terminal/terminaldisplay.cc
++++ b/src/terminal/terminaldisplay.cc
+@@ -47,15 +47,25 @@ static const Renditions & initial_rendition( void )
+ 
+ std::string Display::open() const
+ {
+-  return std::string( smcup ? smcup : "" ) + std::string( "\033[?1h" );
++  std::string result = std::string( smcup ? smcup : "" ) + std::string( "\033[?1h" );
++  if ( kitty_keyboard && !kitty_keyboard_active ) {
++    result.append( "\033[>7u" );
++    kitty_keyboard_active = true;
++  }
++  return result;
+ }
+ 
+ std::string Display::close() const
+ {
+-  return std::string( "\033[?1l\033[0m\033[?25h"
+-		      "\033[?1003l\033[?1002l\033[?1001l\033[?1000l"
+-		      "\033[?1015l\033[?1006l\033[?1005l" ) +
+-    std::string( rmcup ? rmcup : "" );
++  std::string result( "\033[?1l\033[0m\033[?25h"
++                      "\033[?1003l\033[?1002l\033[?1001l\033[?1000l"
++                      "\033[?1015l\033[?1006l\033[?1005l" );
++  if ( kitty_keyboard && kitty_keyboard_active ) {
++    result.append( "\033[<u" );
++    kitty_keyboard_active = false;
++  }
++  result.append( rmcup ? rmcup : "" );
++  return result;
+ }
+ 
+ std::string Display::new_frame( bool initialized, const Framebuffer &last, const Framebuffer &f ) const
+@@ -336,6 +346,13 @@ std::string Display::new_frame( bool initialized, const Framebuffer &last, const
+     }
+   }
+ 
++  /* The outer terminal can reset its keyboard mode without telling us, so
++     every frame that draws sets the Kitty flags again; a remote selection
++     draws before the copy key arrives. Set, not push: the stack stays flat. */
++  if ( kitty_keyboard && kitty_keyboard_active && !frame.str.empty() ) {
++    frame.append( "\033[=7u" );
++  }
++
+   return frame.str;
+ }
+ 
+diff --git a/src/terminal/terminaldisplay.h b/src/terminal/terminaldisplay.h
+index 81009b0..2c599be 100644
+--- a/src/terminal/terminaldisplay.h
++++ b/src/terminal/terminaldisplay.h
+@@ -72,6 +72,12 @@ namespace Terminal {
+ 
+     const char *smcup, *rmcup; /* enter and exit alternate screen mode */
+ 
++    /* Opt-in: request Kitty's disambiguated keyboard protocol inside
++       Mosh's alternate screen so Super/Command-modified keys are representable
++       without emitting standalone modifier-key events. */
++    bool kitty_keyboard;
++    mutable bool kitty_keyboard_active;
++
+     bool put_row( bool initialized, FrameState &frame, const Framebuffer &f, int frame_y, const Row &old_row, bool wrap ) const;
+ 
+   public:
+diff --git a/src/terminal/terminaldisplayinit.cc b/src/terminal/terminaldisplayinit.cc
+index 6dffc51..3b3f27b 100644
+--- a/src/terminal/terminaldisplayinit.cc
++++ b/src/terminal/terminaldisplayinit.cc
+@@ -36,6 +36,7 @@
+ #include "config.h"
+ #include "terminaldisplay.h"
+ 
++#include <cstring>
+ #include <string>
+ #include <stdexcept>
+ 
+@@ -81,9 +82,18 @@ static const char *ti_str( const char *capname )
+ }
+ 
+ Display::Display( bool use_environment )
+-  : has_ech( true ), has_bce( true ), has_title( true ), smcup( NULL ), rmcup( NULL )
++  : has_ech( true ), has_bce( true ), has_title( true ), smcup( NULL ), rmcup( NULL ),
++    kitty_keyboard( false ), kitty_keyboard_active( false )
+ {
+   if ( use_environment ) {
++    const char *kitty_keyboard_env = getenv( "MOSH_KITTY_KEYBOARD" );
++    if ( kitty_keyboard_env ) {
++      if ( strcmp( kitty_keyboard_env, "1" ) != 0 ) {
++        throw std::invalid_argument( "MOSH_KITTY_KEYBOARD must be 1 when set." );
++      }
++      kitty_keyboard = true;
++    }
++
+     int errret = -2;
+     int ret = setupterm( (char *)0, 1, &errret );
+ 
